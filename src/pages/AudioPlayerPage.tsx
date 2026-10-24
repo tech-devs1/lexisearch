@@ -1,0 +1,43 @@
+import React from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Headphones, AlertCircle } from 'lucide-react';
+import { AudioPlayer } from '../components/audio/AudioPlayer';
+import { useCase } from '../context/CaseContext';
+
+export const AudioPlayerPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const evidenceId = searchParams.get('id');
+  const seekSeconds = parseFloat(searchParams.get('seek') || '0');
+  const highlightQuery = searchParams.get('q') || '';
+
+  const { evidenceList, getEvidenceById } = useCase();
+
+  // Find audio file: either from URL query id, or first audio file in active case
+  const audioEvidence = evidenceId
+    ? getEvidenceById(evidenceId)
+    : evidenceList.find((e) => e.fileType === 'audio') || evidenceList[0];
+
+  if (!audioEvidence || audioEvidence.fileType !== 'audio') {
+    return (
+      <div className="max-w-4xl mx-auto py-16 text-center space-y-4">
+        <div className="w-14 h-14 mx-auto rounded-full bg-slate-800 flex items-center justify-center text-amber-400">
+          <Headphones className="w-7 h-7" />
+        </div>
+        <h2 className="text-lg font-bold text-slate-200">No Audio Evidence Selected</h2>
+        <p className="text-xs text-slate-400 max-w-md mx-auto">
+          Please select an audio testimony from the Case Management page or upload a recording (MP3, WAV, M4A).
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-[calc(100vh-8rem)] max-w-7xl mx-auto">
+      <AudioPlayer
+        evidence={audioEvidence}
+        initialSeekSeconds={seekSeconds}
+        highlightQuery={highlightQuery}
+      />
+    </div>
+  );
+};

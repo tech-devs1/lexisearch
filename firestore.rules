@@ -1,0 +1,119 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for authentication and RBAC
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'super_admin' ||
+        getUserData().role == 'super_admin'
+      );
+    }
+
+    function isOrgAdmin(orgId) {
+      return isAuthenticated() && (
+        isSuperAdmin() ||
+        (getUserData().organizationId == orgId && getUserData().role == 'org_admin')
+      );
+    }
+
+    function isCaseMember(caseId) {
+      return isAuthenticated() && (
+        isSuperAdmin() ||
+        exists(/databases/$(database)/documents/cases/$(caseId)/members/$(request.auth.uid))
+      );
+    }
+
+    function getCaseMemberRole(caseId) {
+      return get(/databases/$(database)/documents/cases/$(caseId)/members/$(request.auth.uid)).data.role;
+    }
+
+    function canEditCase(caseId) {
+      return isSuperAdmin() || (
+        isCaseMember(caseId) && 
+        (getCaseMemberRole(caseId) in ['owner', 'editor', 'lawyer'])
+      );
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
+    }
+
+    // Organizations Collection
+    match /organizations/{organizationId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() || getUserData().organizationId == organizationId
+      );
+      allow write: if isSuperAdmin() || isOrgAdmin(organizationId);
+    }
+
+    // Cases Collection
+    match /cases/{caseId} {
+      allow read: if isCaseMember(caseId);
+      allow create: if isAuthenticated() && (
+        getUserData().role in ['super_admin', 'org_admin', 'lawyer']
+      );
+      allow update: if canEditCase(caseId);
+      allow delete: if isSuperAdmin() || (
+        isCaseMember(caseId) && getCaseMemberRole(caseId) == 'owner'
+      );
+
+      // Subcollection: Members
+      match /members/{memberId} {
+        allow read: if isCaseMember(caseId);
+        allow write: if canEditCase(caseId);
+      }
+
+      // Subcollection: Evidence Files
+      match /evidence/{evidenceId} {
+        allow read: if isCaseMember(caseId);
+        allow create: if canEditCase(caseId);
+        // Original evidence hashes and filenames cannot be modified once completed
+        allow update: if canEditCase(caseId);
+        allow delete: if isSuperAdmin() || (
+          isCaseMember(caseId) && getCaseMemberRole(caseId) == 'owner'
+        );
+
+        // Subcollection: Audio Transcript Segments
+        match /segments/{segmentId} {
+          allow read: if isCaseMember(caseId);
+          allow write: if canEditCase(caseId);
+        }
+
+        // Subcollection: Document Pages
+        match /pages/{pageId} {
+          allow read: if isCaseMember(caseId);
+          allow write: if canEditCase(caseId);
+        }
+      }
+
+      // Subcollection: Bookmarks & Annotations
+      match /bookmarks/{bookmarkId} {
+        allow read: if isCaseMember(caseId);
+        allow create: if isCaseMember(caseId) && request.resource.data.createdBy == request.auth.uid;
+        allow update, delete: if isCaseMember(caseId) && (
+          resource.data.createdBy == request.auth.uid || canEditCase(caseId)
+        );
+      }
+
+      // Subcollection: Audit Logs (Tamper-Resistant: Append-Only)
+      match /auditLogs/{logId} {
+        allow read: if isCaseMember(caseId);
+        // Any authenticated member performing actions can append audit logs
+        allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+        // Audit logs can NEVER be updated or deleted by anyone
+        allow update, delete: if false;
+      }
+    }
+  }
+}

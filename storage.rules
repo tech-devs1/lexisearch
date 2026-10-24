@@ -1,0 +1,39 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && request.auth.token.role == 'super_admin';
+    }
+
+    // Original evidence files stored under cases/{caseId}/original/{fileName}
+    match /cases/{caseId}/original/{allPaths=**} {
+      // Only authenticated users can read evidence files if authorized
+      allow read: if isAuthenticated();
+
+      // Write allowed only for verified audio and document MIME types, max 500MB
+      allow create: if isAuthenticated() &&
+        (request.resource.size < 500 * 1024 * 1024) &&
+        (
+          request.resource.contentType.matches('audio/.*') ||
+          request.resource.contentType.matches('application/pdf') ||
+          request.resource.contentType.matches('application/vnd.openxmlformats-officedocument.wordprocessingml.document') ||
+          request.resource.contentType.matches('text/plain')
+        );
+
+      // Original evidence files are IMMUTABLE once written. Deletion restricted to super admins.
+      allow update: if false;
+      allow delete: if isSuperAdmin();
+    }
+
+    // Processed artifacts (audio waveforms, OCR images, extracted text cache)
+    match /cases/{caseId}/artifacts/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+  }
+}
