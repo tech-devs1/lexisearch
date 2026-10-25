@@ -220,8 +220,8 @@ export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
 
-      let parsedSegments;
-      let parsedPages;
+      let parsedSegments: any = undefined;
+      let parsedPages: any = undefined;
       let durationSeconds: number | undefined;
       let speakerCount: number | undefined;
       let pageCount: number | undefined;
