@@ -11,6 +11,13 @@ import { globalAuditService } from '../services/auditService';
 import { storeEvidenceBlob } from '../services/storageVault';
 import { storage } from '../services/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { 
+  saveCase, 
+  loadCases, 
+  saveEvidenceRecord, 
+  saveBookmark as saveBookmarkFirestore,
+  deleteBookmarkFromFirestore 
+} from '../services/firestoreService';
 import { useAuth } from './AuthContext';
 
 interface CaseContextType {
@@ -165,6 +172,9 @@ export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCases(prev => [newCase, ...prev]);
     setActiveCaseId(newCaseId);
 
+    // Persist to Firestore asynchronously
+    saveCase(newCase).catch(e => console.warn('Firestore case save notice:', e));
+
     if (currentUser) {
       globalAuditService.logAction({
         caseId: newCaseId,
@@ -298,6 +308,9 @@ export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Index in search engine
       globalSearchEngine.indexEvidence(newEvidence);
 
+      // Persist evidence record to Firestore subcollection
+      saveEvidenceRecord(newEvidence).catch(e => console.warn('Firestore evidence save notice:', e));
+
       setUploadStatusMessage(`Phase 4/4: Evidence verified and ready!`);
 
       // Update case evidence list
@@ -360,6 +373,9 @@ export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setBookmarks(prev => [newBookmark, ...prev]);
 
+    // Persist bookmark to Firestore
+    saveBookmarkFirestore(newBookmark).catch(e => console.warn('Firestore bookmark save notice:', e));
+
     if (currentUser) {
       await globalAuditService.logAction({
         caseId: data.caseId,
@@ -377,6 +393,10 @@ export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteBookmark = (bookmarkId: string) => {
+    const target = bookmarks.find(b => b.id === bookmarkId);
+    if (target) {
+      deleteBookmarkFromFirestore(target.caseId, bookmarkId).catch(e => console.warn('Firestore bookmark delete notice:', e));
+    }
     setBookmarks(prev => prev.filter(b => b.id !== bookmarkId));
   };
 

@@ -1,5 +1,6 @@
 import { AuditActionType, AuditLogEntry } from '../types/audit';
 import { calculateTextSha256 } from './crypto';
+import { writeAuditLogToFirestore } from './firestoreService';
 
 const AUDIT_STORAGE_KEY = 'gleis_audit_trail_v1';
 
@@ -77,6 +78,9 @@ export class AuditService {
 
     this.inMemoryLogs.unshift(entry);
     this.persistLogs();
+
+    // Persist to Firestore audit logs subcollection
+    writeAuditLogToFirestore(entry).catch(e => console.warn('Firestore audit log write notice:', e));
 
     return entry;
   }
