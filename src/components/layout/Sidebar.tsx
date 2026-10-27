@@ -10,7 +10,8 @@ import {
   Bookmark, 
   ShieldCheck, 
   Users,
-  HardDrive
+  HardDrive,
+  Settings
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCase } from '../../context/CaseContext';
@@ -28,6 +29,7 @@ export const Sidebar: React.FC = () => {
     { to: '/ai-assistant', label: 'AI Evidence Q&A', icon: Sparkles, badge: 'RAG' },
     { to: '/bookmarks', label: 'Bookmarks & Notes', icon: Bookmark, count: bookmarks.length },
     { to: '/audit', label: 'Audit & Integrity', icon: ShieldCheck, badge: 'SHA-256' },
+    { to: '/settings', label: 'Settings', icon: Settings },
   ];
 
   if (canManageUsers()) {

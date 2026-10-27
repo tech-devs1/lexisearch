@@ -14,6 +14,7 @@ import { AiAssistantPage } from './pages/AiAssistantPage';
 import { BookmarksPage } from './pages/BookmarksPage';
 import { AuditPage } from './pages/AuditPage';
 import { UserManagementPage } from './pages/UserManagementPage';
+import { SettingsPage } from './pages/SettingsPage';
 
 // Protected Route Guard
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -65,6 +66,7 @@ export const App: React.FC = () => {
                   </AdminRoute>
                 }
               />
+              <Route path="settings" element={<SettingsPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>
