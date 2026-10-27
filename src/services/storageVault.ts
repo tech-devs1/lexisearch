@@ -73,6 +73,35 @@ export async function storeEvidenceBlob(evidenceId: string, file: Blob | File): 
 }
 
 /**
+ * Retrieves the raw Blob for an evidence audio or document file
+ */
+export async function getEvidenceBlob(evidenceId: string): Promise<Blob | null> {
+  if (memoryBlobCache.has(evidenceId)) {
+    return memoryBlobCache.get(evidenceId)!;
+  }
+
+  try {
+    const db = await getDb();
+    const blob = await new Promise<Blob | null>((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.get(evidenceId);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+
+    if (blob) {
+      memoryBlobCache.set(evidenceId, blob);
+      return blob;
+    }
+  } catch (err) {
+    console.warn('Could not read evidence blob from IndexedDB:', err);
+  }
+
+  return null;
+}
+
+/**
  * Retrieves the playable object URL for an evidence audio or document file
  */
 export async function getEvidenceBlobUrl(evidenceId: string): Promise<string | null> {

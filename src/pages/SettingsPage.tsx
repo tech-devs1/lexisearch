@@ -45,10 +45,14 @@ export const SettingsPage: React.FC = () => {
   const [openaiApiKey, setOpenaiApiKey] = useState(() => {
     return (typeof localStorage !== 'undefined' ? localStorage.getItem('gleis_openai_api_key') : '') || '';
   });
+  const [geminiApiKey, setGeminiApiKey] = useState(() => {
+    return (typeof localStorage !== 'undefined' ? localStorage.getItem('gleis_gemini_api_key') : '') || '';
+  });
 
   const handleSave = () => {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('gleis_openai_api_key', openaiApiKey.trim());
+      localStorage.setItem('gleis_gemini_api_key', geminiApiKey.trim());
     }
     if (currentUser) {
       globalAuditService.logAction({
@@ -278,6 +282,20 @@ export const SettingsPage: React.FC = () => {
               <option value="ee">Ewe</option>
               <option value="dag">Dagbani</option>
             </select>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-800">
+            <div>
+              <div className="font-semibold text-slate-200">Google Gemini API Key (Multimodal Audio & RAG)</div>
+              <div className="text-slate-400 mt-0.5">Powers Gemini 1.5 Flash courtroom speech transcription, Ghanaian language audio recognition, and grounded legal Q&A.</div>
+            </div>
+            <input
+              type="password"
+              value={geminiApiKey}
+              onChange={(e) => setGeminiApiKey(e.target.value)}
+              placeholder="AIzaSy..."
+              className="px-3 py-1.5 bg-slate-850 border border-slate-700 rounded-lg text-slate-200 font-mono text-xs focus:outline-none focus:border-blue-500 w-full sm:w-64"
+            />
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-800">

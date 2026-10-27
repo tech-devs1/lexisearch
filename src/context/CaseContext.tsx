@@ -33,6 +33,7 @@ interface CaseContextType {
   addBookmark: (bookmark: Omit<Bookmark, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>) => Promise<Bookmark>;
   deleteBookmark: (bookmarkId: string) => void;
   getEvidenceById: (evidenceId: string) => EvidenceFile | undefined;
+  updateEvidence: (evidenceId: string, updates: Partial<EvidenceFile>) => Promise<void>;
   clearAllMockData: () => void;
 }
 
@@ -390,6 +391,34 @@ export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return undefined;
   };
 
+  const updateEvidence = async (evidenceId: string, updates: Partial<EvidenceFile>): Promise<void> => {
+    setCases(prev => prev.map(c => {
+      const hasEv = c.evidence?.some(e => e.id === evidenceId);
+      if (!hasEv) return c;
+
+      const updatedEvidence = (c.evidence || []).map(e => {
+        if (e.id === evidenceId) {
+          const merged: EvidenceFile = {
+            ...e,
+            ...updates,
+          };
+          // Re-index into local search engine
+          globalSearchEngine.indexEvidence(merged);
+          // Persist to firestore asynchronously
+          saveEvidenceRecord(merged).catch(err => console.warn('Could not persist updated evidence to Firestore:', err));
+          return merged;
+        }
+        return e;
+      });
+
+      return {
+        ...c,
+        evidence: updatedEvidence,
+        updatedAt: new Date().toISOString(),
+      };
+    }));
+  };
+
   return (
     <CaseContext.Provider
       value={{
@@ -405,6 +434,7 @@ export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addBookmark,
         deleteBookmark,
         getEvidenceById,
+        updateEvidence,
         clearAllMockData,
       }}
     >
