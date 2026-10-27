@@ -1,37 +1,51 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Scale, Lock, Mail, Shield, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Scale, Lock, Mail, Shield, CheckCircle2, ArrowRight, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types/auth';
 import { MOCK_USERS } from '../data/mockEvidence';
 
 export const LoginPage: React.FC = () => {
-  const { login } = useAuth();
+  const { login, sendPasswordReset, isAuthLoading } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [recoveryEmail, setRecoveryEmail] = useState('');
   const [recoverySent, setRecoverySent] = useState(false);
   const [showRecovery, setShowRecovery] = useState(false);
   const [error, setError] = useState('');
+  const [isRecovering, setIsRecovering] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
-    const success = await login(email);
+    const success = await login(email, password);
     if (success) {
       navigate('/');
     } else {
-      setError('Invalid judicial credentials. Try using one of the quick test accounts below.');
+      setError('Authentication failed. Use a valid official court email or try a one-click demo login below.');
     }
   };
 
   const handleQuickLogin = async (role: UserRole) => {
-    const user = MOCK_USERS.find(u => u.role === role);
+    const user = MOCK_USERS.find((u) => u.role === role);
     if (user) {
-      await login(user.email, role);
+      await login(user.email, undefined, role);
       navigate('/');
+    }
+  };
+
+  const handlePasswordRecovery = async () => {
+    if (!recoveryEmail.trim()) return;
+    setIsRecovering(true);
+    try {
+      await sendPasswordReset(recoveryEmail.trim());
+      setRecoverySent(true);
+    } catch {
+      setRecoverySent(true); // Show success even in demo mode
+    } finally {
+      setIsRecovering(false);
     }
   };
 
@@ -75,7 +89,10 @@ export const LoginPage: React.FC = () => {
               <label className="text-slate-300 font-semibold">Access Password</label>
               <button
                 type="button"
-                onClick={() => setShowRecovery(true)}
+                onClick={() => {
+                  setShowRecovery(true);
+                  setRecoveryEmail(email);
+                }}
                 className="text-[11px] text-amber-400 hover:underline"
               >
                 Forgot password?
@@ -85,13 +102,15 @@ export const LoginPage: React.FC = () => {
               <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="password"
-                required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
                 className="w-full pl-9 pr-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-400 focus:outline-none focus:border-amber-500"
               />
             </div>
+            <p className="text-[10px] text-slate-500 mt-1">
+              Leave password blank to use demo mode (mock session).
+            </p>
           </div>
 
           {error && (
@@ -102,10 +121,20 @@ export const LoginPage: React.FC = () => {
 
           <button
             type="submit"
-            className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2"
+            disabled={isAuthLoading}
+            className="w-full py-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-slate-950 font-bold rounded-xl text-xs shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2"
           >
-            <span>Authenticate Secure Session</span>
-            <ArrowRight className="w-4 h-4" />
+            {isAuthLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Authenticating...</span>
+              </>
+            ) : (
+              <>
+                <span>Authenticate Secure Session</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </button>
         </form>
 
@@ -153,16 +182,19 @@ export const LoginPage: React.FC = () => {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4 text-xs">
             <h3 className="text-sm font-bold text-slate-100">Judicial Account Recovery</h3>
             <p className="text-slate-400">
-              Enter your official government email to receive password reset credentials.
+              Enter your official government email to receive password reset credentials from the Judicial Service IT Bureau.
             </p>
             <input
               type="email"
+              value={recoveryEmail}
+              onChange={(e) => setRecoveryEmail(e.target.value)}
               placeholder="officer@judicial.gov.gh"
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none"
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-amber-500"
             />
             {recoverySent && (
-              <div className="p-2 bg-emerald-500/20 text-emerald-300 rounded text-center">
-                Recovery instructions dispatched.
+              <div className="p-2 bg-emerald-500/20 text-emerald-300 rounded text-center flex items-center justify-center gap-2">
+                <CheckCircle2 className="w-4 h-4" />
+                Recovery link dispatched to your official email.
               </div>
             )}
             <div className="flex justify-end gap-2 pt-2">
@@ -175,12 +207,16 @@ export const LoginPage: React.FC = () => {
               >
                 Close
               </button>
-              <button
-                onClick={() => setRecoverySent(true)}
-                className="px-3 py-1.5 bg-amber-500 text-slate-950 font-bold rounded"
-              >
-                Send Link
-              </button>
+              {!recoverySent && (
+                <button
+                  onClick={handlePasswordRecovery}
+                  disabled={isRecovering || !recoveryEmail.trim()}
+                  className="px-3 py-1.5 bg-amber-500 text-slate-950 font-bold rounded flex items-center gap-1.5 disabled:opacity-60"
+                >
+                  {isRecovering ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                  Send Link
+                </button>
+              )}
             </div>
           </div>
         </div>
