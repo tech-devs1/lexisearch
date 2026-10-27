@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { LegalCase } from '../types/case';
 import { EvidenceFile, EvidenceStatus } from '../types/evidence';
 import { Bookmark } from '../types/bookmark';
-import { MOCK_CASES, MOCK_EVIDENCE_FILES } from '../data/mockEvidence';
 import { calculateFileSha256 } from '../services/crypto';
 import { transcribeAudioFile } from '../services/audioProcessor';
 import { extractDocumentText } from '../services/documentProcessor';
@@ -39,20 +38,28 @@ interface CaseContextType {
 
 const CaseContext = createContext<CaseContextType | undefined>(undefined);
 
+// Clear any old legacy mock fixtures from previous versions
+if (typeof localStorage !== 'undefined') {
+  const casesJson = localStorage.getItem('gleis_cases_v1');
+  if (casesJson && casesJson.includes('CR/ACC/0482/2026')) {
+    localStorage.removeItem('gleis_cases_v1');
+  }
+  const bookmarksJson = localStorage.getItem('gleis_bookmarks_v1');
+  if (bookmarksJson && bookmarksJson.includes('Court_Proceeding_CrossExam_Kwame_Mensah')) {
+    localStorage.removeItem('gleis_bookmarks_v1');
+  }
+}
+
 export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser } = useAuth();
   const [cases, setCases] = useState<LegalCase[]>(() => {
-    const isCleared = localStorage.getItem('gleis_mock_cleared') === 'true';
-    if (isCleared) {
-      const saved = localStorage.getItem('gleis_cases_v1');
-      if (saved) {
-        try { return JSON.parse(saved); } catch { /* ignore */ }
-      }
-      return [];
-    }
     const saved = localStorage.getItem('gleis_cases_v1');
     if (saved) {
-      try { return JSON.parse(saved); } catch { /* ignore */ }
+      try {
+        const parsed = JSON.parse(saved);
+        // Exclude mock cases if any leaked in
+        return parsed.filter((c: LegalCase) => c.caseNumber !== 'CR/ACC/0482/2026' && c.caseNumber !== 'CR/KUM/0190/2026');
+      } catch { /* ignore */ }
     }
     return [];
   });
@@ -62,17 +69,12 @@ export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(() => {
-    const isCleared = localStorage.getItem('gleis_mock_cleared') === 'true';
-    if (isCleared) {
-      const saved = localStorage.getItem('gleis_bookmarks_v1');
-      if (saved) {
-        try { return JSON.parse(saved); } catch { /* ignore */ }
-      }
-      return [];
-    }
     const saved = localStorage.getItem('gleis_bookmarks_v1');
     if (saved) {
-      try { return JSON.parse(saved); } catch { /* ignore */ }
+      try {
+        const parsed = JSON.parse(saved);
+        return parsed.filter((b: Bookmark) => !b.fileName?.includes('Kwame_Mensah') && !b.fileName?.includes('Exhibit_P7'));
+      } catch { /* ignore */ }
     }
     return [];
   });
