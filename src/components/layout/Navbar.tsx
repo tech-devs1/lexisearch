@@ -11,7 +11,8 @@ import {
   User, 
   LogOut, 
   FileCheck,
-  CheckCircle2
+  CheckCircle2,
+  Mic
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -107,8 +108,31 @@ export const Navbar: React.FC = () => {
             value={quickQuery}
             onChange={(e) => setQuickQuery(e.target.value)}
             placeholder="Search audio transcripts, exhibits, witnesses, amounts..."
-            className="w-full pl-9 pr-4 py-1.5 bg-slate-800/90 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-amber-500/70 focus:ring-1 focus:ring-amber-500/50 transition"
+            className="w-full pl-9 pr-8 py-1.5 bg-slate-800/90 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-amber-500/70 focus:ring-1 focus:ring-amber-500/50 transition"
           />
+          <button
+            type="button"
+            onClick={() => {
+              const SpeechRecognition =
+                (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+              if (SpeechRecognition) {
+                const rec = new SpeechRecognition();
+                rec.lang = 'en-GH';
+                rec.onresult = (evt: any) => {
+                  const val = evt.results[0][0].transcript;
+                  setQuickQuery(val);
+                  navigate(`/search?q=${encodeURIComponent(val)}`);
+                };
+                rec.start();
+              } else {
+                navigate('/search');
+              }
+            }}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-amber-400 transition"
+            title="Voice Search"
+          >
+            <Mic className="w-3.5 h-3.5" />
+          </button>
         </form>
       </div>
 

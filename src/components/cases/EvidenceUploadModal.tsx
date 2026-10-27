@@ -4,10 +4,12 @@ import {
   Upload, 
   FileText, 
   Headphones, 
+  Video,
   ShieldCheck, 
   CheckCircle2, 
   AlertTriangle,
-  Loader2
+  Loader2,
+  Cloud
 } from 'lucide-react';
 import { useCase } from '../../context/CaseContext';
 
@@ -71,8 +73,14 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
               <Upload className="w-4 h-4" />
             </span>
             <div>
-              <h3 className="text-base font-bold text-slate-100">Upload Legal Evidence</h3>
-              <p className="text-xs text-slate-400">Audio recordings & legal document exhibits</p>
+              <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                <span>Upload Legal Evidence</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono font-normal flex items-center gap-1">
+                  <Cloud className="w-3 h-3 text-orange-400" />
+                  Cloudflare R2 Encrypted
+                </span>
+              </h3>
+              <p className="text-xs text-slate-400">Audio, video recordings & legal document exhibits</p>
             </div>
           </div>
           <button
@@ -94,7 +102,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
             type="file"
             id="evidence-file-input"
             onChange={handleFileChange}
-            accept=".mp3,.wav,.m4a,.aac,.ogg,.flac,.pdf,.docx,.txt,.png,.jpg,.jpeg"
+            accept=".mp3,.wav,.m4a,.aac,.ogg,.flac,.mp4,.webm,.mov,.mkv,.pdf,.docx,.txt,.png,.jpg,.jpeg"
             className="hidden"
             disabled={isProcessingUpload}
           />
@@ -107,7 +115,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
                 Click to browse or drag & drop evidence file
               </p>
               <p className="text-xs text-slate-400 mt-1">
-                Audio (MP3, WAV, M4A) • Documents (PDF, DOCX, TXT) • Scanned Exhibits
+                Audio (MP3, WAV, M4A) • Video (MP4, WEBM) • Documents (PDF, DOCX) • Exhibits
               </p>
             </div>
           </label>
@@ -118,7 +126,9 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
           <div className="p-4 rounded-xl bg-slate-850 border border-slate-800 space-y-3">
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-2 truncate">
-                {selectedFile.type.startsWith('audio') ? (
+                {selectedFile.type.startsWith('video') ? (
+                  <Video className="w-4 h-4 text-purple-400 shrink-0" />
+                ) : selectedFile.type.startsWith('audio') ? (
                   <Headphones className="w-4 h-4 text-amber-400 shrink-0" />
                 ) : (
                   <FileText className="w-4 h-4 text-blue-400 shrink-0" />
@@ -130,9 +140,12 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
               </span>
             </div>
 
-            <div className="text-[11px] text-emerald-400 flex items-center gap-1.5 font-medium">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>SHA-256 chain-of-custody seal will be computed before ingestion</span>
+            <div className="text-[11px] text-emerald-400 flex items-center justify-between font-medium">
+              <span className="flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>SHA-256 chain-of-custody seal will be computed before ingestion</span>
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono">Dest: Cloudflare R2</span>
             </div>
           </div>
         )}
@@ -148,8 +161,8 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
         {/* Success Notice */}
         {uploadSuccess && (
           <div className="p-4 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center gap-2 text-emerald-300 text-xs font-semibold">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            <span>Evidence uploaded, transcribed/extracted, sealed, and indexed successfully!</span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>Evidence uploaded to Cloudflare R2, transcribed/extracted, sealed, and indexed successfully!</span>
           </div>
         )}
 

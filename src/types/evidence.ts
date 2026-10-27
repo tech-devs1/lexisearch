@@ -1,4 +1,4 @@
-export type EvidenceType = 'audio' | 'document';
+export type EvidenceType = 'audio' | 'video' | 'document';
 
 export type EvidenceStatus = 
   | 'uploaded'

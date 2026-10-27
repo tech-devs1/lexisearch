@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   HardDrive,
   FileCheck,
+  Mic,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCase } from '../context/CaseContext';
@@ -23,7 +24,7 @@ import { globalAuditService } from '../services/auditService';
 
 export const SettingsPage: React.FC = () => {
   const { currentUser, canManageUsers } = useAuth();
-  const { cases, evidenceList } = useCase();
+  const { cases, evidenceList, clearAllMockData } = useCase();
   const [saved, setSaved] = useState(false);
 
   // Security & Privacy settings
@@ -321,20 +322,44 @@ export const SettingsPage: React.FC = () => {
               <div>
                 <div className="font-semibold text-red-300 flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-red-400" />
-                  Clear Local Session Cache
+                  Clear All Mock & Demo Data
                 </div>
                 <div className="text-slate-400 mt-0.5">
-                  Wipes browser localStorage and IndexedDB cache (uploaded evidence blobs). Original files in Firebase Storage remain intact.
+                  Purges all simulated cases, mock evidence files, demo transcripts, and bookmarks, resetting GLEIS to a pristine empty state.
                 </div>
               </div>
               <button
                 onClick={() => {
-                  if (window.confirm('Clear all local session data? Firebase Storage originals are safe.')) {
+                  if (window.confirm('Are you sure you want to clear all mock/demo cases and evidence? This operation resets GLEIS to a clean slate.')) {
+                    clearAllMockData();
+                    alert('All mock data has been purged from the system.');
+                  }
+                }}
+                className="px-4 py-2 rounded-lg bg-red-700 hover:bg-red-600 text-white font-bold text-xs transition flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Purge Mock Data
+              </button>
+            </div>
+
+            <div className="p-4 rounded-xl bg-slate-850 border border-slate-800 flex items-center justify-between">
+              <div>
+                <div className="font-semibold text-slate-200 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-400" />
+                  Clear Local Session Cache
+                </div>
+                <div className="text-slate-400 mt-0.5">
+                  Wipes browser localStorage and IndexedDB cache (uploaded evidence blobs).
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  if (window.confirm('Clear local session cache?')) {
                     localStorage.clear();
                     window.location.reload();
                   }
                 }}
-                className="px-4 py-2 rounded-lg bg-red-700 hover:bg-red-600 text-white font-bold text-xs transition flex items-center gap-1.5"
+                className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs transition flex items-center gap-1.5"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 Clear Cache
@@ -352,11 +377,13 @@ export const SettingsPage: React.FC = () => {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
           {[
-            { label: 'Firebase Project', val: 'glies-6c39a', icon: Globe },
-            { label: 'Data Residency', val: 'us-central1 (Google Cloud)', icon: HardDrive },
+            { label: 'Storage Provider', val: 'Cloudflare R2 (API & Vault Encrypted)', icon: Globe },
+            { label: 'Firebase Project', val: 'glies-6c39a (Auth, Firestore, DB)', icon: HardDrive },
+            { label: 'Evidence Bucket', val: 'gleis-evidence (Cloudflare R2)', icon: Globe },
             { label: 'Auth Standard', val: 'Firebase Auth + RBAC (4 roles)', icon: Lock },
             { label: 'Evidence Integrity', val: 'SHA-256 + HMAC Audit Chain', icon: ShieldCheck },
             { label: 'Compliance', val: 'Ghana Evidence Act, NRCD 323', icon: FileCheck },
+            { label: 'Voice Search', val: 'Web Speech STT (English / Dialect)', icon: Mic },
             { label: 'GLEIS Version', val: 'v1.0.0 — Judicial Service Build', icon: Settings },
           ].map(({ label, val, icon: Icon }) => (
             <div key={label} className="p-3 rounded-xl bg-slate-850 border border-slate-800 flex items-center gap-3">

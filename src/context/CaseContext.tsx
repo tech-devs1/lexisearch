@@ -9,6 +9,7 @@ import { extractDocumentText } from '../services/documentProcessor';
 import { globalSearchEngine } from '../services/searchEngine';
 import { globalAuditService } from '../services/auditService';
 import { storeEvidenceBlob } from '../services/storageVault';
+import { uploadEvidenceToR2 } from '../services/cloudflareR2Service';
 import { storage } from '../services/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { 
@@ -33,6 +34,7 @@ interface CaseContextType {
   addBookmark: (bookmark: Omit<Bookmark, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>) => Promise<Bookmark>;
   deleteBookmark: (bookmarkId: string) => void;
   getEvidenceById: (evidenceId: string) => EvidenceFile | undefined;
+  clearAllMockData: () => void;
 }
 
 const CaseContext = createContext<CaseContextType | undefined>(undefined);
@@ -40,61 +42,39 @@ const CaseContext = createContext<CaseContextType | undefined>(undefined);
 export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser } = useAuth();
   const [cases, setCases] = useState<LegalCase[]>(() => {
+    const isCleared = localStorage.getItem('gleis_mock_cleared') === 'true';
+    if (isCleared) {
+      const saved = localStorage.getItem('gleis_cases_v1');
+      if (saved) {
+        try { return JSON.parse(saved); } catch { /* ignore */ }
+      }
+      return [];
+    }
     const saved = localStorage.getItem('gleis_cases_v1');
     if (saved) {
       try { return JSON.parse(saved); } catch { /* ignore */ }
     }
-    return MOCK_CASES;
+    return [];
   });
 
   const [activeCaseId, setActiveCaseId] = useState<string>(() => {
-    return cases[0]?.id || 'case_gh_cr_2026_0482';
+    return cases[0]?.id || '';
   });
 
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(() => {
+    const isCleared = localStorage.getItem('gleis_mock_cleared') === 'true';
+    if (isCleared) {
+      const saved = localStorage.getItem('gleis_bookmarks_v1');
+      if (saved) {
+        try { return JSON.parse(saved); } catch { /* ignore */ }
+      }
+      return [];
+    }
     const saved = localStorage.getItem('gleis_bookmarks_v1');
     if (saved) {
       try { return JSON.parse(saved); } catch { /* ignore */ }
     }
-    return [
-      {
-        id: 'bm_001',
-        caseId: 'case_gh_cr_2026_0482',
-        evidenceId: 'ev_aud_001',
-        fileName: 'Court_Proceeding_CrossExam_Kwame_Mensah_20260318.mp3',
-        type: 'audio',
-        timestamp: 45.0,
-        timestampDisplay: '00:45',
-        passageSnippet: 'Defense Counsel questions witness about Kempinski Hotel meeting on 14th March 2026.',
-        note: 'Crucial timeline contradiction to compare with CID Port gate pass logs (Exhibit D2).',
-        tags: ['Contradiction', 'Alibi'],
-        createdBy: {
-          uid: 'user_lawyer',
-          displayName: 'Mrs. Abena Osei-Mensah (Chief State Attorney)',
-          email: 'abena.osei@ag.gov.gh',
-        },
-        createdAt: '2026-03-20T10:00:00Z',
-        updatedAt: '2026-03-20T10:00:00Z',
-      },
-      {
-        id: 'bm_002',
-        caseId: 'case_gh_cr_2026_0482',
-        evidenceId: 'ev_doc_001',
-        fileName: 'Exhibit_P7_Forensic_Financial_Audit_Report.pdf',
-        type: 'document',
-        pageNumber: 2,
-        passageSnippet: 'Line 19: Description "Procurement Consulting Advance Retainer, Batch 89" - GH¢ 450,000.',
-        note: 'Dispute over source of payment: Accused claims Ministry, bank ledger confirms Gold Coast Engineering.',
-        tags: ['Financial Trail', 'Exhibit P7'],
-        createdBy: {
-          uid: 'user_lawyer',
-          displayName: 'Mrs. Abena Osei-Mensah (Chief State Attorney)',
-          email: 'abena.osei@ag.gov.gh',
-        },
-        createdAt: '2026-03-20T11:30:00Z',
-        updatedAt: '2026-03-20T11:30:00Z',
-      }
-    ];
+    return [];
   });
 
   const [isProcessingUpload, setIsProcessingUpload] = useState(false);
@@ -111,8 +91,6 @@ export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
         globalSearchEngine.indexEvidence(c.evidence);
       }
     }
-    // Also index mock evidence files
-    globalSearchEngine.indexEvidence(MOCK_EVIDENCE_FILES);
   }, [cases]);
 
   useEffect(() => {
@@ -258,20 +236,12 @@ export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
         warnings = docResult.warnings;
       }
 
-      setUploadStatusMessage(`Phase 3/4: Indexing full-text search engine...`);
+      setUploadStatusMessage(`Phase 3/4: Uploading to Cloudflare R2 & indexing search engine...`);
 
-      // Persist evidence binary in local storage vault & cloud storage
-      let fileUrl = await storeEvidenceBlob(evidenceId, file);
-      if (storage) {
-        try {
-          const storageRef = ref(storage, `cases/${caseId}/original/${evidenceId}_${file.name}`);
-          await uploadBytes(storageRef, file);
-          const remoteUrl = await getDownloadURL(storageRef);
-          if (remoteUrl) fileUrl = remoteUrl;
-        } catch (err) {
-          console.warn('Firebase Storage upload notice, using local vault:', err);
-        }
-      }
+      // Upload evidence binary to Cloudflare R2
+      const r2Result = await uploadEvidenceToR2(file, caseId, evidenceId, file.name);
+      let fileUrl = r2Result.url;
+      const storagePath = r2Result.storagePath;
 
       status = warnings && warnings.length > 0 ? 'completed_with_warnings' : 'completed';
 
@@ -282,7 +252,7 @@ export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
         originalFileName: file.name,
         fileType,
         mimeType: file.type || (isAudio ? 'audio/mpeg' : 'application/pdf'),
-        storagePath: `cases/${caseId}/original/${file.name}`,
+        storagePath,
         fileUrl,
         fileSizeBytes: file.size,
         sha256Hash: sha256,
@@ -400,12 +370,22 @@ export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setBookmarks(prev => prev.filter(b => b.id !== bookmarkId));
   };
 
+  const clearAllMockData = () => {
+    localStorage.setItem('gleis_mock_cleared', 'true');
+    localStorage.removeItem('gleis_cases_v1');
+    localStorage.removeItem('gleis_bookmarks_v1');
+    globalSearchEngine.clear();
+    setCases([]);
+    setActiveCaseId('');
+    setBookmarks([]);
+  };
+
   const getEvidenceById = (evidenceId: string): EvidenceFile | undefined => {
     for (const c of cases) {
       const found = c.evidence?.find(e => e.id === evidenceId);
       if (found) return found;
     }
-    return MOCK_EVIDENCE_FILES.find(e => e.id === evidenceId);
+    return undefined;
   };
 
   return (
@@ -423,6 +403,7 @@ export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addBookmark,
         deleteBookmark,
         getEvidenceById,
+        clearAllMockData,
       }}
     >
       {children}
