@@ -134,17 +134,17 @@ export const UnifiedSearchBar: React.FC<UnifiedSearchBarProps> = ({
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 lg:p-6 shadow-xl space-y-4">
+    <div className="bg-[#0F172A] border border-slate-800 rounded-xl p-4 lg:p-5 shadow-sm space-y-3.5">
       {/* Mode Switches */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
-        <div className="flex items-center gap-1.5 p-1 bg-slate-800 rounded-xl">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+        <div className="flex items-center gap-1 p-0.5 bg-slate-900 border border-slate-800 rounded-lg">
           <button
             type="button"
             onClick={() => onModeChange('keyword')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
               mode === 'keyword'
-                ? 'bg-amber-500 text-slate-950 shadow-md'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             Exact Keyword
@@ -152,10 +152,10 @@ export const UnifiedSearchBar: React.FC<UnifiedSearchBarProps> = ({
           <button
             type="button"
             onClick={() => onModeChange('exact_phrase')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
               mode === 'exact_phrase'
-                ? 'bg-amber-500 text-slate-950 shadow-md'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             Exact Phrase "..."
@@ -163,25 +163,25 @@ export const UnifiedSearchBar: React.FC<UnifiedSearchBarProps> = ({
           <button
             type="button"
             onClick={() => onModeChange('semantic')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
+            className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition ${
               mode === 'semantic'
-                ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-md'
-                : 'text-purple-300 hover:text-white'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             <Sparkles className="w-3.5 h-3.5" />
-            AI Semantic (By Meaning)
+            AI Semantic (Meaning)
           </button>
         </div>
 
-        {/* Evidence Type Pills */}
-        <div className="flex items-center gap-2">
+        {/* Evidence Type Filter Buttons */}
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => onFilterChange({ ...filters, evidenceType: 'all' })}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition ${
+            className={`px-2.5 py-1 rounded-md text-xs font-medium border transition ${
               !filters.evidenceType || filters.evidenceType === 'all'
-                ? 'bg-slate-800 text-amber-400 border-amber-500/40'
+                ? 'bg-slate-800 text-blue-400 border-blue-900/60'
                 : 'text-slate-400 border-slate-800 hover:bg-slate-850'
             }`}
           >
@@ -190,9 +190,9 @@ export const UnifiedSearchBar: React.FC<UnifiedSearchBarProps> = ({
           <button
             type="button"
             onClick={() => onFilterChange({ ...filters, evidenceType: 'audio' })}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium border flex items-center gap-1.5 transition ${
+            className={`px-2.5 py-1 rounded-md text-xs font-medium border flex items-center gap-1.5 transition ${
               filters.evidenceType === 'audio'
-                ? 'bg-slate-800 text-amber-400 border-amber-500/40'
+                ? 'bg-slate-800 text-blue-400 border-blue-900/60'
                 : 'text-slate-400 border-slate-800 hover:bg-slate-850'
             }`}
           >
@@ -202,9 +202,9 @@ export const UnifiedSearchBar: React.FC<UnifiedSearchBarProps> = ({
           <button
             type="button"
             onClick={() => onFilterChange({ ...filters, evidenceType: 'document' })}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium border flex items-center gap-1.5 transition ${
+            className={`px-2.5 py-1 rounded-md text-xs font-medium border flex items-center gap-1.5 transition ${
               filters.evidenceType === 'document'
-                ? 'bg-slate-800 text-amber-400 border-amber-500/40'
+                ? 'bg-slate-800 text-blue-400 border-blue-900/60'
                 : 'text-slate-400 border-slate-800 hover:bg-slate-850'
             }`}
           >
@@ -215,9 +215,9 @@ export const UnifiedSearchBar: React.FC<UnifiedSearchBarProps> = ({
       </div>
 
       {/* Main Search Input with Voice Search Mic */}
-      <form onSubmit={handleSubmit} className="flex gap-3">
+      <form onSubmit={handleSubmit} className="flex gap-2.5">
         <div className="relative flex-1">
-          <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             value={query}
@@ -231,10 +231,10 @@ export const UnifiedSearchBar: React.FC<UnifiedSearchBarProps> = ({
                 ? 'Search exact courtroom quotes, e.g. "Kempinski Hotel in Accra"'
                 : 'Enter keywords, names, dates, amounts, e.g. "450,000", "Tema Port", "Exhibit P7"'
             }
-            className={`w-full pl-12 pr-12 py-3 bg-slate-800/90 border rounded-xl text-sm text-slate-100 placeholder-slate-400 focus:outline-none transition ${
+            className={`w-full pl-10 pr-10 py-2.5 bg-slate-900 border rounded-lg text-xs text-slate-100 placeholder-slate-400 focus:outline-none transition font-sans ${
               isListening 
-                ? 'border-red-500/80 ring-2 ring-red-500/30' 
-                : 'border-slate-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500'
+                ? 'border-red-500/80 ring-2 ring-red-500/20' 
+                : 'border-slate-800 focus:border-blue-500'
             }`}
           />
 
@@ -242,42 +242,42 @@ export const UnifiedSearchBar: React.FC<UnifiedSearchBarProps> = ({
           <button
             type="button"
             onClick={toggleVoiceSearch}
-            className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg transition ${
+            className={`absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md transition ${
               isListening
-                ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/40'
-                : 'text-slate-400 hover:text-amber-400 hover:bg-slate-700/60'
+                ? 'bg-red-500 text-white animate-pulse'
+                : 'text-slate-400 hover:text-blue-400 hover:bg-slate-800'
             }`}
             title={isListening ? 'Stop voice listening' : 'Start voice search (Speech-to-Text)'}
           >
             {isListening ? (
-              <Mic className="w-4 h-4 fill-white animate-bounce" />
+              <Mic className="w-3.5 h-3.5 fill-white" />
             ) : (
-              <Mic className="w-4 h-4" />
+              <Mic className="w-3.5 h-3.5" />
             )}
           </button>
         </div>
 
         <button
           type="submit"
-          className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm shadow-lg shadow-amber-500/20 transition flex items-center gap-2"
+          className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg text-xs transition flex items-center gap-1.5 shadow-sm shrink-0"
         >
-          <Search className="w-4 h-4" />
-          <span>Execute Search</span>
+          <Search className="w-3.5 h-3.5" />
+          <span>Search</span>
         </button>
       </form>
 
       {/* Voice Recognition Status Banner */}
       {voiceNotice && (
-        <div className={`p-2.5 rounded-xl border text-xs flex items-center justify-between transition ${
+        <div className={`p-2 rounded-md border text-xs flex items-center justify-between transition ${
           isListening 
-            ? 'bg-red-500/10 border-red-500/30 text-red-300' 
-            : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+            ? 'bg-red-950/40 border-red-900/60 text-red-300' 
+            : 'bg-blue-950/40 border-blue-900/60 text-blue-300'
         }`}>
           <div className="flex items-center gap-2">
             {isListening ? (
-              <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
             ) : (
-              <Volume2 className="w-4 h-4 text-amber-400" />
+              <Volume2 className="w-3.5 h-3.5 text-blue-400" />
             )}
             <span>{voiceNotice}</span>
           </div>
@@ -285,7 +285,7 @@ export const UnifiedSearchBar: React.FC<UnifiedSearchBarProps> = ({
             <button
               type="button"
               onClick={toggleVoiceSearch}
-              className="text-[11px] underline font-semibold text-red-400 hover:text-red-300"
+              className="text-[11px] underline font-medium text-red-400 hover:text-red-300"
             >
               Cancel
             </button>
@@ -294,19 +294,21 @@ export const UnifiedSearchBar: React.FC<UnifiedSearchBarProps> = ({
       )}
 
       {/* Hint for Search Quality */}
-      <div className="text-[11px] text-slate-400 flex flex-wrap items-center justify-between gap-2">
+      <div className="text-[11px] text-slate-400 flex flex-wrap items-center justify-between gap-2 pt-0.5">
         <span>
           {mode === 'semantic' ? (
-            <span className="text-purple-300">
-              * Semantic search retrieves conceptually related passages even if exact terms differ (e.g., money ↔ 450,000 Cedis transfer).
+            <span className="text-slate-400 font-mono text-[10px]">
+              SEMANTIC MODE: Identifies conceptually related witness statements and financial ledgers.
             </span>
           ) : (
-            <span>* Searches word-level audio transcripts and page-preserved document exhibits simultaneously.</span>
+            <span className="text-slate-400 font-mono text-[10px]">
+              EXACT MODE: Cross-examines word-level audio transcripts and page-preserved exhibits.
+            </span>
           )}
         </span>
-        <span className="text-slate-400 flex items-center gap-1">
-          <Mic className="w-3 h-3 text-amber-400" />
-          Voice search supported (English / Courtroom dialect)
+        <span className="text-slate-400 font-mono text-[10px] flex items-center gap-1">
+          <Mic className="w-3 h-3 text-blue-400" />
+          Voice search: English (Ghana)
         </span>
       </div>
     </div>
