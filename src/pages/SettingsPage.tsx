@@ -42,13 +42,19 @@ export const SettingsPage: React.FC = () => {
   const [showHashFull, setShowHashFull] = useState(false);
   const [defaultSearchMode, setDefaultSearchMode] = useState('keyword');
   const [transcriptLanguage, setTranscriptLanguage] = useState('en-GH');
+  const [openaiApiKey, setOpenaiApiKey] = useState(() => {
+    return (typeof localStorage !== 'undefined' ? localStorage.getItem('gleis_openai_api_key') : '') || '';
+  });
 
   const handleSave = () => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('gleis_openai_api_key', openaiApiKey.trim());
+    }
     if (currentUser) {
       globalAuditService.logAction({
         caseId: 'system',
         action: 'PERMISSION_CHANGE',
-        actionDescription: 'User updated application settings.',
+        actionDescription: 'User updated application settings and speech transcription credentials.',
         userId: currentUser.uid,
         userEmail: currentUser.email,
         userRole: currentUser.role,
@@ -272,6 +278,20 @@ export const SettingsPage: React.FC = () => {
               <option value="ee">Ewe</option>
               <option value="dag">Dagbani</option>
             </select>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-800">
+            <div>
+              <div className="font-semibold text-slate-200">OpenAI / Whisper API Key (Audio Speech-to-Text)</div>
+              <div className="text-slate-400 mt-0.5">Allows cloud Whisper transcription for newly uploaded audio files with word-level timestamps.</div>
+            </div>
+            <input
+              type="password"
+              value={openaiApiKey}
+              onChange={(e) => setOpenaiApiKey(e.target.value)}
+              placeholder="sk-proj-..."
+              className="px-3 py-1.5 bg-slate-850 border border-slate-700 rounded-lg text-slate-200 font-mono text-xs focus:outline-none focus:border-blue-500 w-full sm:w-64"
+            />
           </div>
         </div>
       </div>

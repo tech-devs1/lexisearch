@@ -46,26 +46,44 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const transcriptContainerRef = useRef<HTMLDivElement | null>(null);
   const speechUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  // Resolve audio source URL from evidence or IndexedDB vault
+  // Resolve audio source URL from IndexedDB vault or evidence URL
   useEffect(() => {
     let isCancelled = false;
 
     async function resolveAudioSource() {
-      if (evidence.fileUrl) {
-        setAudioUrl(evidence.fileUrl);
-        setUsingSynthesizedSpeech(false);
+      // 1. Check local IndexedDB vault first (guarantees fresh working blob URL across reloads)
+      try {
+        const storedUrl = await getEvidenceBlobUrl(evidence.id);
+        if (!isCancelled && storedUrl) {
+          setAudioUrl(storedUrl);
+          setUsingSynthesizedSpeech(false);
+          return;
+        }
+      } catch (e) {
+        console.warn('Could not read from evidence vault:', e);
+      }
+
+      // 2. Fall back to evidence.fileUrl if it is a valid remote URL (not an expired blob URL from a past session)
+      if (evidence.fileUrl && !evidence.fileUrl.startsWith('blob:')) {
+        if (!isCancelled) {
+          setAudioUrl(evidence.fileUrl);
+          setUsingSynthesizedSpeech(false);
+        }
         return;
       }
 
-      const storedUrl = await getEvidenceBlobUrl(evidence.id);
-      if (!isCancelled) {
-        if (storedUrl) {
-          setAudioUrl(storedUrl);
+      // 3. If evidence.fileUrl was a blob URL created in this session, try using it
+      if (evidence.fileUrl && evidence.fileUrl.startsWith('blob:')) {
+        if (!isCancelled) {
+          setAudioUrl(evidence.fileUrl);
           setUsingSynthesizedSpeech(false);
-        } else {
-          setAudioUrl(null);
-          setUsingSynthesizedSpeech(true);
         }
+        return;
+      }
+
+      if (!isCancelled) {
+        setAudioUrl(null);
+        setUsingSynthesizedSpeech(true);
       }
     }
 
@@ -177,7 +195,20 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
           await audioRef.current.play();
           setIsPlaying(true);
         } catch (err) {
-          console.error('Audio playback error:', err);
+          console.warn('Initial audio playback attempt failed, trying IndexedDB blob recovery:', err);
+          // Attempt recovery from vault
+          try {
+            const freshUrl = await getEvidenceBlobUrl(evidence.id);
+            if (freshUrl && audioRef.current) {
+              setAudioUrl(freshUrl);
+              audioRef.current.src = freshUrl;
+              await audioRef.current.play();
+              setIsPlaying(true);
+              return;
+            }
+          } catch (retryErr) {
+            console.error('Audio playback recovery error:', retryErr);
+          }
         }
       }
     } else {
@@ -240,6 +271,21 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
           preload="auto"
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
+          onError={async (e) => {
+            console.warn('Native audio element reported error, attempting IndexedDB recovery...', e);
+            try {
+              const freshUrl = await getEvidenceBlobUrl(evidence.id);
+              if (freshUrl && freshUrl !== audioUrl) {
+                setAudioUrl(freshUrl);
+                if (audioRef.current) {
+                  audioRef.current.src = freshUrl;
+                  audioRef.current.load();
+                }
+              }
+            } catch (err) {
+              console.error('Audio recovery failed:', err);
+            }
+          }}
           onTimeUpdate={() => {
             if (audioRef.current) {
               setCurrentTime(audioRef.current.currentTime);
@@ -258,32 +304,32 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       )}
 
       {/* Player Header & Metadata */}
-      <div className="p-4 lg:p-6 bg-slate-850 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4">
+      <div className="p-4 lg:p-6 bg-slate-900 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
+            <span className="px-2 py-0.5 rounded text-[10px] font-medium tracking-wide bg-slate-800 text-slate-300 border border-slate-700">
               Legal Audio Evidence
             </span>
             <span className="text-xs text-slate-400 font-mono">
               SHA-256: {formatHashTruncated(evidence.sha256Hash, 8)}
             </span>
             {usingSynthesizedSpeech && (
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center gap-1">
+              <span className="px-2 py-0.5 rounded text-[10px] font-medium tracking-wide bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
                 Speech Synthesis Active
               </span>
             )}
           </div>
-          <h2 className="text-base lg:text-lg font-bold text-slate-100 mt-1 flex items-center gap-2">
+          <h2 className="text-base lg:text-lg font-semibold text-slate-100 mt-1 flex items-center gap-2">
             {evidence.fileName}
           </h2>
           <div className="flex items-center gap-4 text-xs text-slate-400 mt-1">
             <span className="flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              <Clock className="w-3.5 h-3.5 text-blue-400" />
               Duration: {formatSecondsToTimestamp(duration)}
             </span>
             <span className="flex items-center gap-1">
-              <Users className="w-3.5 h-3.5 text-blue-400" />
+              <Users className="w-3.5 h-3.5 text-slate-400" />
               {evidence.speakerCount || 2} Identified Speakers
             </span>
             <span className="flex items-center gap-1 text-emerald-400">
@@ -296,16 +342,16 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         {/* Playback Rate & Volume Controls */}
         <div className="flex items-center gap-4">
           {/* Volume Slider & Mute Toggle */}
-          <div className="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
+          <div className="flex items-center gap-2 bg-slate-850 px-3 py-1.5 rounded-lg border border-slate-800">
             <button
               onClick={() => setIsMuted(!isMuted)}
               className="text-slate-300 hover:text-white"
               title={isMuted ? 'Unmute' : 'Mute'}
             >
               {isMuted || volume === 0 ? (
-                <VolumeX className="w-4 h-4 text-red-400" />
+                <VolumeX className="w-4 h-4 text-rose-400" />
               ) : (
-                <Volume2 className="w-4 h-4 text-amber-400" />
+                <Volume2 className="w-4 h-4 text-slate-300" />
               )}
             </button>
             <input
@@ -319,7 +365,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                 setVolume(newVol);
                 if (newVol > 0 && isMuted) setIsMuted(false);
               }}
-              className="w-16 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
+              className="w-16 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
               title="Volume control"
             />
           </div>
@@ -331,10 +377,10 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
               <button
                 key={rate}
                 onClick={() => setPlaybackRate(rate)}
-                className={`px-2 py-1 rounded text-xs font-semibold transition ${
+                className={`px-2 py-1 rounded text-xs font-medium transition ${
                   playbackRate === rate
-                    ? 'bg-amber-500 text-slate-950 shadow-md'
-                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-850 text-slate-400 hover:text-white border border-slate-800'
                 }`}
               >
                 {rate}x
@@ -347,7 +393,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       {/* Waveform & Scrubber Control */}
       <div className="px-6 py-4 bg-slate-900 border-b border-slate-800">
         <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-2">
-          <span className="text-amber-400 font-semibold">{formatSecondsToTimestamp(currentTime)}</span>
+          <span className="text-blue-400 font-medium">{formatSecondsToTimestamp(currentTime)}</span>
           <span>{formatSecondsToTimestamp(duration)}</span>
         </div>
 
@@ -359,20 +405,20 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
             const pct = Math.max(0, Math.min(1, clickX / rect.width));
             seekTo(pct * duration);
           }}
-          className="h-3 bg-slate-800 rounded-full cursor-pointer relative overflow-hidden group"
+          className="h-2 bg-slate-800 rounded-full cursor-pointer relative overflow-hidden group"
         >
           <div
-            className="h-full bg-gradient-to-r from-amber-500 to-amber-400 relative rounded-full transition-all duration-75"
+            className="h-full bg-blue-500 relative rounded-full transition-all duration-75"
             style={{ width: `${Math.min(100, (currentTime / (duration || 1)) * 100)}%` }}
           />
-          <div className="absolute inset-0 bg-amber-400/10 opacity-0 group-hover:opacity-100 transition" />
+          <div className="absolute inset-0 bg-blue-400/10 opacity-0 group-hover:opacity-100 transition" />
         </div>
 
         {/* Transport buttons */}
         <div className="flex items-center justify-center gap-4 mt-4">
           <button
             onClick={() => seekTo(currentTime - 5)}
-            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+            className="p-2 rounded-lg bg-slate-850 hover:bg-slate-800 border border-slate-800 text-slate-300 transition"
             title="Rewind 5 seconds"
           >
             <RotateCcw className="w-4 h-4" />
@@ -380,15 +426,15 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
           <button
             onClick={togglePlay}
-            className="w-12 h-12 rounded-full bg-gradient-to-tr from-amber-500 to-amber-400 text-slate-950 font-bold flex items-center justify-center shadow-lg shadow-amber-500/25 hover:scale-105 active:scale-95 transition"
+            className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-medium flex items-center justify-center shadow-md shadow-blue-600/25 active:scale-95 transition"
             title={isPlaying ? 'Pause Audio' : 'Play Audio'}
           >
-            {isPlaying ? <Pause className="w-5 h-5 fill-slate-950" /> : <Play className="w-5 h-5 fill-slate-950 ml-0.5" />}
+            {isPlaying ? <Pause className="w-5 h-5 fill-white" /> : <Play className="w-5 h-5 fill-white ml-0.5" />}
           </button>
 
           <button
             onClick={() => seekTo(currentTime + 5)}
-            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+            className="p-2 rounded-lg bg-slate-850 hover:bg-slate-800 border border-slate-800 text-slate-300 transition"
             title="Forward 5 seconds"
           >
             <RotateCw className="w-4 h-4" />
@@ -397,11 +443,11 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       </div>
 
       {/* Interactive Transcripts with Speaker Diarization */}
-      <div className="flex-1 flex flex-col min-h-0">
-        <div className="px-6 py-3 bg-slate-850/60 border-b border-slate-800 flex items-center justify-between text-xs font-semibold text-slate-400">
+      <div className="flex-1 flex flex-col min-h-0 bg-slate-900/50">
+        <div className="px-6 py-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-xs font-semibold text-slate-300">
           <div className="flex items-center gap-2">
-            <MessageSquareQuote className="w-4 h-4 text-amber-400" />
-            <span>SYNCHRONIZED TRANSCRIPT WITH SPEAKER LABELS</span>
+            <MessageSquareQuote className="w-4 h-4 text-blue-400" />
+            <span className="tracking-wide">SYNCHRONIZED TRANSCRIPT WITH SPEAKER LABELS</span>
           </div>
           <span className="text-[11px] text-slate-400 font-normal">
             Click any sentence or timestamp to jump audio
@@ -422,23 +468,23 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                 id={`seg-row-${idx}`}
                 className={`pt-3 rounded-xl p-3.5 transition ${
                   isActive
-                    ? 'bg-amber-500/10 border border-amber-500/30'
+                    ? 'bg-blue-600/10 border border-blue-500/30'
                     : isMatch
-                    ? 'bg-yellow-500/10 border border-yellow-500/20'
-                    : 'hover:bg-slate-850'
+                    ? 'bg-slate-800 border border-slate-700'
+                    : 'hover:bg-slate-850/60'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                      className={`text-xs font-medium px-2 py-0.5 rounded ${
                         seg.speakerLabel?.includes('Judge')
-                          ? 'bg-purple-900/60 text-purple-300 border border-purple-700/50'
+                          ? 'bg-purple-950/70 text-purple-300 border border-purple-800/50'
                           : seg.speakerLabel?.includes('Attorney') || seg.speakerLabel?.includes('Prosecution')
-                          ? 'bg-red-900/60 text-red-300 border border-red-700/50'
+                          ? 'bg-rose-950/70 text-rose-300 border border-rose-800/50'
                           : seg.speakerLabel?.includes('Counsel')
-                          ? 'bg-blue-900/60 text-blue-300 border border-blue-700/50'
-                          : 'bg-emerald-900/60 text-emerald-300 border border-emerald-700/50'
+                          ? 'bg-blue-950/70 text-blue-300 border border-blue-800/50'
+                          : 'bg-slate-800 text-slate-300 border border-slate-700'
                       }`}
                     >
                       {seg.speakerLabel || 'Speaker'}
@@ -446,7 +492,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
                     <button
                       onClick={() => seekTo(seg.startTime)}
-                      className="text-xs font-mono text-amber-400 hover:underline flex items-center gap-1"
+                      className="text-xs font-mono text-blue-400 hover:underline flex items-center gap-1"
                     >
                       [{formatSecondsToTimestamp(seg.startTime)} - {formatSecondsToTimestamp(seg.endTime)}]
                     </button>
@@ -457,7 +503,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                     className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded transition ${
                       bookmarkSuccess === seg.id
                         ? 'bg-emerald-500/20 text-emerald-300'
-                        : 'text-slate-400 hover:text-amber-300 hover:bg-slate-800'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
                     }`}
                     title="Bookmark this testimony segment"
                   >
@@ -487,10 +533,10 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                           }}
                           className={`inline-block mr-1 rounded px-0.5 transition ${
                             isWordActive
-                              ? 'bg-amber-400 text-slate-950 font-bold scale-105'
+                              ? 'bg-blue-500 text-white font-medium scale-105'
                               : isWordQuery
-                              ? 'bg-yellow-400/40 text-yellow-200 font-semibold'
-                              : 'hover:text-amber-300'
+                              ? 'bg-blue-900/50 text-blue-200 font-semibold'
+                              : 'hover:text-blue-300'
                           }`}
                         >
                           {w.word}

@@ -20,12 +20,12 @@ export const AudioPlayerPage: React.FC = () => {
   if (!audioEvidence || audioEvidence.fileType !== 'audio') {
     return (
       <div className="max-w-4xl mx-auto py-16 text-center space-y-4">
-        <div className="w-14 h-14 mx-auto rounded-full bg-slate-800 flex items-center justify-center text-amber-400">
+        <div className="w-14 h-14 mx-auto rounded-full bg-slate-800/80 border border-slate-700/60 flex items-center justify-center text-blue-400">
           <Headphones className="w-7 h-7" />
         </div>
-        <h2 className="text-lg font-bold text-slate-200">No Audio Evidence Selected</h2>
-        <p className="text-xs text-slate-400 max-w-md mx-auto">
-          Please select an audio testimony from the Case Management page or upload a recording (MP3, WAV, M4A).
+        <h2 className="text-lg font-semibold text-slate-100">No Audio Evidence Selected</h2>
+        <p className="text-sm text-slate-400 max-w-md mx-auto">
+          Please select an audio recording from the Case Management page or upload an audio file (MP3, WAV, M4A) to begin interactive synchronized playback.
         </p>
       </div>
     );
