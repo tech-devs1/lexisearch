@@ -8,6 +8,9 @@ import { transcribeAudioFile } from '../services/audioProcessor';
 import { extractDocumentText } from '../services/documentProcessor';
 import { globalSearchEngine } from '../services/searchEngine';
 import { globalAuditService } from '../services/auditService';
+import { storeEvidenceBlob } from '../services/storageVault';
+import { storage } from '../services/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuth } from './AuthContext';
 
 interface CaseContextType {
@@ -247,6 +250,19 @@ export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setUploadStatusMessage(`Phase 3/4: Indexing full-text search engine...`);
 
+      // Persist evidence binary in local storage vault & cloud storage
+      let fileUrl = await storeEvidenceBlob(evidenceId, file);
+      if (storage) {
+        try {
+          const storageRef = ref(storage, `cases/${caseId}/original/${evidenceId}_${file.name}`);
+          await uploadBytes(storageRef, file);
+          const remoteUrl = await getDownloadURL(storageRef);
+          if (remoteUrl) fileUrl = remoteUrl;
+        } catch (err) {
+          console.warn('Firebase Storage upload notice, using local vault:', err);
+        }
+      }
+
       status = warnings && warnings.length > 0 ? 'completed_with_warnings' : 'completed';
 
       const newEvidence: EvidenceFile = {
@@ -257,6 +273,7 @@ export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
         fileType,
         mimeType: file.type || (isAudio ? 'audio/mpeg' : 'application/pdf'),
         storagePath: `cases/${caseId}/original/${file.name}`,
+        fileUrl,
         fileSizeBytes: file.size,
         sha256Hash: sha256,
         uploadedBy: {

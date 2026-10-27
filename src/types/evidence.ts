@@ -45,6 +45,7 @@ export interface EvidenceFile {
   fileType: EvidenceType;
   mimeType: string;
   storagePath: string;
+  fileUrl?: string;
   fileSizeBytes: number;
   sha256Hash: string;
   uploadedBy: {

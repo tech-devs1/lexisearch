@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Headphones, AlertCircle } from 'lucide-react';
+import { Headphones } from 'lucide-react';
 import { AudioPlayer } from '../components/audio/AudioPlayer';
 import { useCase } from '../context/CaseContext';
 
