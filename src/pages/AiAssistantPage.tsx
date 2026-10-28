@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Scale, AlertCircle } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { LegalAiPanel } from '../components/ai/LegalAiPanel';
 import { useCase } from '../context/CaseContext';
 
@@ -8,17 +8,17 @@ export const AiAssistantPage: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      <div>
+      <div className="border-b border-gray-200 pb-4">
         <div className="flex items-center gap-2">
-          <span className="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-500 to-indigo-600 text-white flex items-center justify-center font-bold shadow-md">
-            <Sparkles className="w-4 h-4" />
+          <span className="w-7 h-7 rounded-md bg-gray-900 text-white flex items-center justify-center font-bold shadow-xs">
+            <Sparkles className="w-3.5 h-3.5" />
           </span>
-          <h1 className="text-xl lg:text-2xl font-black text-slate-100">
+          <h1 className="text-lg lg:text-xl font-bold text-gray-900">
             Evidentiary AI Question Answering & Synthesis
           </h1>
         </div>
-        <p className="text-xs text-slate-400 mt-1">
-          Active Case: <span className="font-semibold text-amber-400">{activeCase?.caseNumber}</span> — {activeCase?.title} ({evidenceList.length} indexed files)
+        <p className="text-xs text-gray-500 mt-1">
+          Active Case: <span className="font-semibold text-gray-900 font-mono">{activeCase?.caseNumber}</span> — {activeCase?.title} ({evidenceList.length} indexed files)
         </p>
       </div>
 

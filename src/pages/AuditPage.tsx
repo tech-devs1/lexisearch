@@ -2,13 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, 
   Download, 
-  FileCheck, 
   Lock, 
   CheckCircle2, 
-  Search, 
-  Clock, 
-  AlertTriangle,
-  FileSpreadsheet
+  AlertTriangle 
 } from 'lucide-react';
 import { globalAuditService } from '../services/auditService';
 import { AuditLogEntry } from '../types/audit';
@@ -20,7 +16,7 @@ export const AuditPage: React.FC = () => {
   const { activeCase } = useCase();
   const { canExportAuditLogs } = useAuth();
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
-  const [filterAction, setFilterAction] = useState<string>('all');
+  const [filterAction] = useState<string>('all');
   const [verificationMap, setVerificationMap] = useState<Record<string, boolean>>({});
   const [isVerifying, setIsVerifying] = useState(false);
 
@@ -62,17 +58,17 @@ export const AuditPage: React.FC = () => {
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
-              <ShieldCheck className="w-4 h-4" />
+            <span className="w-7 h-7 rounded-md bg-gray-100 border border-gray-200 text-gray-800 flex items-center justify-center font-bold">
+              <ShieldCheck className="w-3.5 h-3.5" />
             </span>
-            <h1 className="text-xl lg:text-2xl font-black text-slate-100">
+            <h1 className="text-lg lg:text-xl font-bold text-gray-900">
               Chain of Custody & Tamper-Evident Audit Trail
             </h1>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-gray-500 mt-1">
             Section 112 Ghana Evidence Act (NRCD 323) compliant electronic forensic tracking.
           </p>
         </div>
@@ -80,33 +76,33 @@ export const AuditPage: React.FC = () => {
         {canExportAuditLogs() && (
           <button
             onClick={handleExportReport}
-            className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition flex items-center gap-2"
+            className="px-3.5 py-1.5 rounded-lg bg-gray-900 hover:bg-black text-white font-medium text-xs transition flex items-center gap-1.5 shadow-xs"
           >
-            <Download className="w-4 h-4" />
+            <Download className="w-3.5 h-3.5" />
             <span>Export Certified Custody Certificate</span>
           </button>
         )}
       </div>
 
       {/* Security Status Box */}
-      <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-4">
+      <div className="p-4 rounded-xl bg-white border border-gray-200 flex flex-wrap items-center justify-between gap-4 shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-            <Lock className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-700">
+            <Lock className="w-4 h-4" />
           </div>
           <div>
-            <div className="text-xs font-bold text-slate-200">
+            <div className="text-xs font-semibold text-gray-900">
               Immutable Cryptographic Ledger Status
             </div>
-            <div className="text-[11px] text-slate-400">
+            <div className="text-[11px] text-gray-500">
               Each record possesses a SHA-256 HMAC digest tying action, timestamp, user, and evidence hash.
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-4 text-xs font-mono">
-          <span className="text-slate-400">Total Audit Events: {logs.length}</span>
-          <span className="text-emerald-400 flex items-center gap-1 font-semibold">
+          <span className="text-gray-500">Total Audit Events: {logs.length}</span>
+          <span className="text-emerald-600 flex items-center gap-1 font-semibold">
             <CheckCircle2 className="w-4 h-4" />
             {isVerifying ? 'Verifying Integrity...' : 'Integrity Verified (0 Violations)'}
           </span>
@@ -114,61 +110,61 @@ export const AuditPage: React.FC = () => {
       </div>
 
       {/* Audit Log Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl overflow-hidden">
+      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-850 text-slate-400 uppercase tracking-wider text-[10px] border-b border-slate-800">
+            <thead className="bg-gray-50 text-gray-500 uppercase tracking-wider text-[10px] border-b border-gray-200 font-mono">
               <tr>
-                <th className="py-3 px-4">Timestamp (UTC)</th>
-                <th className="py-3 px-4">Action Type</th>
-                <th className="py-3 px-4">Authorized Officer</th>
-                <th className="py-3 px-4">Evidence & Event Narrative</th>
-                <th className="py-3 px-4">Evidence SHA-256</th>
-                <th className="py-3 px-4 text-right">Integrity Status</th>
+                <th className="py-2.5 px-3 font-semibold">Timestamp (UTC)</th>
+                <th className="py-2.5 px-3 font-semibold">Action Type</th>
+                <th className="py-2.5 px-3 font-semibold">Authorized Officer</th>
+                <th className="py-2.5 px-3 font-semibold">Evidence & Event Narrative</th>
+                <th className="py-2.5 px-3 font-semibold">Evidence SHA-256</th>
+                <th className="py-2.5 px-3 text-right font-semibold">Integrity Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
+            <tbody className="divide-y divide-gray-100 font-mono text-[11px]">
               {filteredLogs.map((log) => {
                 const isValid = verificationMap[log.id] !== false;
                 return (
-                  <tr key={log.id} className="hover:bg-slate-850/50 transition">
-                    <td className="py-3.5 px-4 text-slate-400 font-mono whitespace-nowrap">
+                  <tr key={log.id} className="hover:bg-gray-50/70 transition">
+                    <td className="py-3 px-3 text-gray-500 font-mono whitespace-nowrap">
                       {new Date(log.timestamp).toLocaleString()}
                     </td>
 
-                    <td className="py-3.5 px-4">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700">
+                    <td className="py-3 px-3">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-gray-100 text-gray-700 border border-gray-200">
                         {log.action.replace(/_/g, ' ')}
                       </span>
                     </td>
 
-                    <td className="py-3.5 px-4 font-sans text-slate-200">
-                      <div className="font-semibold">{log.userEmail}</div>
-                      <div className="text-[10px] text-amber-400 uppercase">{log.userRole}</div>
+                    <td className="py-3 px-3 font-sans text-gray-900">
+                      <div className="font-semibold text-xs">{log.userEmail}</div>
+                      <div className="text-[10px] text-gray-500 uppercase font-mono">{log.userRole}</div>
                     </td>
 
-                    <td className="py-3.5 px-4 font-sans text-slate-300 max-w-xs">
+                    <td className="py-3 px-3 font-sans text-gray-700 max-w-xs text-xs">
                       {log.actionDescription}
                     </td>
 
-                    <td className="py-3.5 px-4 text-slate-400">
+                    <td className="py-3 px-3 text-gray-600">
                       {log.evidenceSha256 ? (
-                        <span className="text-amber-400 font-mono" title={log.evidenceSha256}>
+                        <span className="font-mono text-gray-900" title={log.evidenceSha256}>
                           {formatHashTruncated(log.evidenceSha256, 6)}
                         </span>
                       ) : (
-                        <span className="text-slate-400 italic">N/A</span>
+                        <span className="text-gray-400 italic">N/A</span>
                       )}
                     </td>
 
-                    <td className="py-3.5 px-4 text-right">
+                    <td className="py-3 px-3 text-right">
                       {isValid ? (
-                        <span className="inline-flex items-center gap-1 text-emerald-400 text-[10px] font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                        <span className="inline-flex items-center gap-1 text-emerald-700 text-[10px] font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                           <CheckCircle2 className="w-3 h-3" />
                           SEALED
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-red-400 text-[10px] font-bold bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
+                        <span className="inline-flex items-center gap-1 text-red-700 text-[10px] font-semibold bg-red-50 px-2 py-0.5 rounded border border-red-200">
                           <AlertTriangle className="w-3 h-3" />
                           TAMPERED
                         </span>

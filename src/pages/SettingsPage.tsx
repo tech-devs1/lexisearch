@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   Lock,
   Eye,
-  EyeOff,
   Globe,
   AlertTriangle,
   RefreshCw,
@@ -82,74 +81,74 @@ export const SettingsPage: React.FC = () => {
   const totalStorageMB = evidenceList.reduce((sum, e) => sum + (e.fileSizeBytes || 0), 0) / (1024 * 1024);
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto">
       {/* Header */}
-      <div>
+      <div className="border-b border-gray-200 pb-4">
         <div className="flex items-center gap-2">
-          <span className="w-8 h-8 rounded-lg bg-slate-700 text-slate-300 flex items-center justify-center">
-            <Settings className="w-4 h-4" />
+          <span className="w-7 h-7 rounded-md bg-gray-100 border border-gray-200 text-gray-800 flex items-center justify-center font-bold">
+            <Settings className="w-3.5 h-3.5" />
           </span>
-          <h1 className="text-xl lg:text-2xl font-black text-slate-100">
+          <h1 className="text-lg lg:text-xl font-bold text-gray-900">
             System Configuration & Settings
           </h1>
         </div>
-        <p className="text-xs text-slate-400 mt-1">
+        <p className="text-xs text-gray-500 mt-1">
           Manage security policies, notification preferences, and system behaviour for GLEIS.
         </p>
       </div>
 
       {/* Account Overview Card */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-        <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
-          <span className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-lg">
+      <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 shadow-xs">
+        <div className="flex items-center gap-3 border-b border-gray-100 pb-4">
+          <span className="w-10 h-10 rounded-xl bg-gray-100 border border-gray-200 text-gray-900 flex items-center justify-center font-bold text-lg">
             {currentUser?.displayName.charAt(0)}
           </span>
           <div>
-            <div className="text-sm font-bold text-slate-100">{currentUser?.displayName}</div>
-            <div className="text-xs text-slate-400 font-mono">{currentUser?.email}</div>
-            <div className="text-[11px] text-amber-400 uppercase tracking-wider font-semibold">
+            <div className="text-sm font-semibold text-gray-900">{currentUser?.displayName}</div>
+            <div className="text-xs text-gray-500 font-mono">{currentUser?.email}</div>
+            <div className="text-[11px] text-gray-600 uppercase tracking-wider font-mono font-medium">
               {currentUser?.role.replace('_', ' ')} — {currentUser?.organizationName}
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center text-xs">
-          <div className="p-3 rounded-xl bg-slate-850 border border-slate-800">
-            <div className="text-lg font-black text-slate-100">{cases.length}</div>
-            <div className="text-slate-400 mt-0.5">Active Cases</div>
+          <div className="p-3 rounded-lg bg-gray-50 border border-gray-200">
+            <div className="text-lg font-bold text-gray-900 font-mono">{cases.length}</div>
+            <div className="text-gray-500 mt-0.5">Active Cases</div>
           </div>
-          <div className="p-3 rounded-xl bg-slate-850 border border-slate-800">
-            <div className="text-lg font-black text-slate-100">{evidenceList.length}</div>
-            <div className="text-slate-400 mt-0.5">Evidence Files</div>
+          <div className="p-3 rounded-lg bg-gray-50 border border-gray-200">
+            <div className="text-lg font-bold text-gray-900 font-mono">{evidenceList.length}</div>
+            <div className="text-gray-500 mt-0.5">Evidence Files</div>
           </div>
-          <div className="p-3 rounded-xl bg-slate-850 border border-slate-800">
-            <div className="text-lg font-black text-amber-400">{totalStorageMB.toFixed(1)} MB</div>
-            <div className="text-slate-400 mt-0.5">Storage Used</div>
+          <div className="p-3 rounded-lg bg-gray-50 border border-gray-200">
+            <div className="text-lg font-bold text-gray-900 font-mono">{totalStorageMB.toFixed(1)} MB</div>
+            <div className="text-gray-500 mt-0.5">Storage Used</div>
           </div>
-          <div className="p-3 rounded-xl bg-slate-850 border border-slate-800">
-            <div className="text-lg font-black text-emerald-400">100%</div>
-            <div className="text-slate-400 mt-0.5">Integrity Score</div>
+          <div className="p-3 rounded-lg bg-gray-50 border border-gray-200">
+            <div className="text-lg font-bold text-emerald-600 font-mono">100%</div>
+            <div className="text-gray-500 mt-0.5">Integrity Score</div>
           </div>
         </div>
       </div>
 
       {/* Security Settings */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5">
-        <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-          <Shield className="w-4 h-4 text-amber-400" />
-          <h2 className="text-sm font-bold text-slate-100">Security & Access Policies</h2>
+      <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5 shadow-xs">
+        <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+          <Shield className="w-4 h-4 text-gray-800" />
+          <h2 className="text-sm font-semibold text-gray-900">Security & Access Policies</h2>
         </div>
 
         <div className="space-y-4 text-xs">
           <div className="flex items-center justify-between">
             <div>
-              <div className="font-semibold text-slate-200">Session Timeout</div>
-              <div className="text-slate-400 mt-0.5">Automatically log out inactive officers after this period.</div>
+              <div className="font-medium text-gray-900">Session Timeout</div>
+              <div className="text-gray-500 mt-0.5">Automatically log out inactive officers after this period.</div>
             </div>
             <select
               value={sessionTimeout}
               onChange={(e) => setSessionTimeout(e.target.value)}
-              className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-amber-500"
+              className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-900 text-xs focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
             >
               <option value="15">15 minutes</option>
               <option value="30">30 minutes</option>
@@ -161,50 +160,50 @@ export const SettingsPage: React.FC = () => {
 
           <div className="flex items-center justify-between">
             <div>
-              <div className="font-semibold text-slate-200">Multi-Factor Authentication (MFA)</div>
-              <div className="text-slate-400 mt-0.5">Require OTP or authenticator app for all judicial logins.</div>
+              <div className="font-medium text-gray-900">Multi-Factor Authentication (MFA)</div>
+              <div className="text-gray-500 mt-0.5">Require OTP or authenticator app for all judicial logins.</div>
             </div>
             <button
               onClick={() => setRequireMfa(!requireMfa)}
-              className={`w-12 h-6 rounded-full transition-colors flex items-center px-1 ${requireMfa ? 'bg-amber-500' : 'bg-slate-700'}`}
+              className={`w-11 h-6 rounded-full transition-colors flex items-center px-0.5 ${requireMfa ? 'bg-gray-900' : 'bg-gray-200'}`}
             >
-              <span className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${requireMfa ? 'translate-x-6' : 'translate-x-0'}`} />
+              <span className={`w-5 h-5 rounded-full bg-white shadow-xs transition-transform ${requireMfa ? 'translate-x-5' : 'translate-x-0'}`} />
             </button>
           </div>
 
           <div className="flex items-center justify-between">
             <div>
-              <div className="font-semibold text-slate-200">Audit Evidence Downloads</div>
-              <div className="text-slate-400 mt-0.5">Log every officer who downloads or exports evidence files.</div>
+              <div className="font-medium text-gray-900">Audit Evidence Downloads</div>
+              <div className="text-gray-500 mt-0.5">Log every officer who downloads or exports evidence files.</div>
             </div>
             <button
               onClick={() => setAuditDownloads(!auditDownloads)}
-              className={`w-12 h-6 rounded-full transition-colors flex items-center px-1 ${auditDownloads ? 'bg-amber-500' : 'bg-slate-700'}`}
+              className={`w-11 h-6 rounded-full transition-colors flex items-center px-0.5 ${auditDownloads ? 'bg-gray-900' : 'bg-gray-200'}`}
             >
-              <span className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${auditDownloads ? 'translate-x-6' : 'translate-x-0'}`} />
+              <span className={`w-5 h-5 rounded-full bg-white shadow-xs transition-transform ${auditDownloads ? 'translate-x-5' : 'translate-x-0'}`} />
             </button>
           </div>
 
           <div className="flex items-center justify-between">
             <div>
-              <div className="font-semibold text-slate-200">Audit All Search Queries</div>
-              <div className="text-slate-400 mt-0.5">Record every search performed across all cases in the audit trail.</div>
+              <div className="font-medium text-gray-900">Audit All Search Queries</div>
+              <div className="text-gray-500 mt-0.5">Record every search performed across all cases in the audit trail.</div>
             </div>
             <button
               onClick={() => setAuditSearches(!auditSearches)}
-              className={`w-12 h-6 rounded-full transition-colors flex items-center px-1 ${auditSearches ? 'bg-amber-500' : 'bg-slate-700'}`}
+              className={`w-11 h-6 rounded-full transition-colors flex items-center px-0.5 ${auditSearches ? 'bg-gray-900' : 'bg-gray-200'}`}
             >
-              <span className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${auditSearches ? 'translate-x-6' : 'translate-x-0'}`} />
+              <span className={`w-5 h-5 rounded-full bg-white shadow-xs transition-transform ${auditSearches ? 'translate-x-5' : 'translate-x-0'}`} />
             </button>
           </div>
         </div>
       </div>
 
       {/* Notifications */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5">
-        <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-          <Bell className="w-4 h-4 text-blue-400" />
-          <h2 className="text-sm font-bold text-slate-100">Notification Preferences</h2>
+      <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5 shadow-xs">
+        <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+          <Bell className="w-4 h-4 text-gray-800" />
+          <h2 className="text-sm font-semibold text-gray-900">Notification Preferences</h2>
         </div>
 
         <div className="space-y-4 text-xs">
@@ -215,14 +214,14 @@ export const SettingsPage: React.FC = () => {
           ].map(({ label, desc, val, set }) => (
             <div key={label} className="flex items-center justify-between">
               <div>
-                <div className="font-semibold text-slate-200">{label}</div>
-                <div className="text-slate-400 mt-0.5">{desc}</div>
+                <div className="font-medium text-gray-900">{label}</div>
+                <div className="text-gray-500 mt-0.5">{desc}</div>
               </div>
               <button
                 onClick={() => set(!val)}
-                className={`w-12 h-6 rounded-full transition-colors flex items-center px-1 ${val ? 'bg-blue-500' : 'bg-slate-700'}`}
+                className={`w-11 h-6 rounded-full transition-colors flex items-center px-0.5 ${val ? 'bg-gray-900' : 'bg-gray-200'}`}
               >
-                <span className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${val ? 'translate-x-6' : 'translate-x-0'}`} />
+                <span className={`w-5 h-5 rounded-full bg-white shadow-xs transition-transform ${val ? 'translate-x-5' : 'translate-x-0'}`} />
               </button>
             </div>
           ))}
@@ -230,35 +229,35 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       {/* Display Preferences */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5">
-        <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-          <Eye className="w-4 h-4 text-purple-400" />
-          <h2 className="text-sm font-bold text-slate-100">Display & Search Preferences</h2>
+      <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5 shadow-xs">
+        <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+          <Eye className="w-4 h-4 text-gray-800" />
+          <h2 className="text-sm font-semibold text-gray-900">Display & Search Preferences</h2>
         </div>
 
         <div className="space-y-4 text-xs">
           <div className="flex items-center justify-between">
             <div>
-              <div className="font-semibold text-slate-200">Show Full SHA-256 Hashes</div>
-              <div className="text-slate-400 mt-0.5">Display complete 64-character hash strings instead of truncated 8-char previews.</div>
+              <div className="font-medium text-gray-900">Show Full SHA-256 Hashes</div>
+              <div className="text-gray-500 mt-0.5">Display complete 64-character hash strings instead of truncated 8-char previews.</div>
             </div>
             <button
               onClick={() => setShowHashFull(!showHashFull)}
-              className={`w-12 h-6 rounded-full transition-colors flex items-center px-1 ${showHashFull ? 'bg-purple-500' : 'bg-slate-700'}`}
+              className={`w-11 h-6 rounded-full transition-colors flex items-center px-0.5 ${showHashFull ? 'bg-gray-900' : 'bg-gray-200'}`}
             >
-              <span className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${showHashFull ? 'translate-x-6' : 'translate-x-0'}`} />
+              <span className={`w-5 h-5 rounded-full bg-white shadow-xs transition-transform ${showHashFull ? 'translate-x-5' : 'translate-x-0'}`} />
             </button>
           </div>
 
           <div className="flex items-center justify-between">
             <div>
-              <div className="font-semibold text-slate-200">Default Search Mode</div>
-              <div className="text-slate-400 mt-0.5">Mode used when opening the Unified Search page.</div>
+              <div className="font-medium text-gray-900">Default Search Mode</div>
+              <div className="text-gray-500 mt-0.5">Mode used when opening the Unified Search page.</div>
             </div>
             <select
               value={defaultSearchMode}
               onChange={(e) => setDefaultSearchMode(e.target.value)}
-              className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-amber-500"
+              className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-900 text-xs focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
             >
               <option value="keyword">Keyword Search</option>
               <option value="phrase">Exact Phrase</option>
@@ -268,13 +267,13 @@ export const SettingsPage: React.FC = () => {
 
           <div className="flex items-center justify-between">
             <div>
-              <div className="font-semibold text-slate-200">Transcription Language</div>
-              <div className="text-slate-400 mt-0.5">Primary language for audio transcription and keyword matching.</div>
+              <div className="font-medium text-gray-900">Transcription Language</div>
+              <div className="text-gray-500 mt-0.5">Primary language for audio transcription and keyword matching.</div>
             </div>
             <select
               value={transcriptLanguage}
               onChange={(e) => setTranscriptLanguage(e.target.value)}
-              className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-amber-500"
+              className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-900 text-xs focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
             >
               <option value="en-GH">English (Ghana)</option>
               <option value="en-GB">English (UK)</option>
@@ -284,31 +283,31 @@ export const SettingsPage: React.FC = () => {
             </select>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-800">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-3 border-t border-gray-100">
             <div>
-              <div className="font-semibold text-slate-200">Google Gemini API Key (Multimodal Audio & RAG)</div>
-              <div className="text-slate-400 mt-0.5">Powers Gemini 1.5 Flash courtroom speech transcription, Ghanaian language audio recognition, and grounded legal Q&A.</div>
+              <div className="font-medium text-gray-900">Google Gemini API Key (Multimodal Audio & RAG)</div>
+              <div className="text-gray-500 mt-0.5">Powers Gemini 1.5 Flash courtroom speech transcription, Ghanaian language audio recognition, and grounded legal Q&A.</div>
             </div>
             <input
               type="password"
               value={geminiApiKey}
               onChange={(e) => setGeminiApiKey(e.target.value)}
               placeholder="AIzaSy..."
-              className="px-3 py-1.5 bg-slate-850 border border-slate-700 rounded-lg text-slate-200 font-mono text-xs focus:outline-none focus:border-blue-500 w-full sm:w-64"
+              className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 font-mono text-xs focus:ring-1 focus:ring-gray-900 focus:border-gray-900 w-full sm:w-64"
             />
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-800">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-3 border-t border-gray-100">
             <div>
-              <div className="font-semibold text-slate-200">OpenAI / Whisper API Key (Audio Speech-to-Text)</div>
-              <div className="text-slate-400 mt-0.5">Allows cloud Whisper transcription for newly uploaded audio files with word-level timestamps.</div>
+              <div className="font-medium text-gray-900">OpenAI / Whisper API Key (Audio Speech-to-Text)</div>
+              <div className="text-gray-500 mt-0.5">Allows cloud Whisper transcription for newly uploaded audio files with word-level timestamps.</div>
             </div>
             <input
               type="password"
               value={openaiApiKey}
               onChange={(e) => setOpenaiApiKey(e.target.value)}
               placeholder="sk-proj-..."
-              className="px-3 py-1.5 bg-slate-850 border border-slate-700 rounded-lg text-slate-200 font-mono text-xs focus:outline-none focus:border-blue-500 w-full sm:w-64"
+              className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 font-mono text-xs focus:ring-1 focus:ring-gray-900 focus:border-gray-900 w-full sm:w-64"
             />
           </div>
         </div>
@@ -316,53 +315,53 @@ export const SettingsPage: React.FC = () => {
 
       {/* Data Management */}
       {canManageUsers() && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5">
-          <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-            <Database className="w-4 h-4 text-emerald-400" />
-            <h2 className="text-sm font-bold text-slate-100">Data Management & Exports (Admin)</h2>
+        <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5 shadow-xs">
+          <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+            <Database className="w-4 h-4 text-gray-800" />
+            <h2 className="text-sm font-semibold text-gray-900">Data Management & Exports (Admin)</h2>
           </div>
 
           <div className="space-y-3 text-xs">
-            <div className="p-4 rounded-xl bg-slate-850 border border-slate-800 flex items-center justify-between">
+            <div className="p-4 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-between">
               <div>
-                <div className="font-semibold text-slate-200 flex items-center gap-2">
-                  <FileCheck className="w-4 h-4 text-emerald-400" />
+                <div className="font-medium text-gray-900 flex items-center gap-2">
+                  <FileCheck className="w-4 h-4 text-gray-700" />
                   Export Full Audit Trail
                 </div>
-                <div className="text-slate-400 mt-0.5">Download HMAC-verified audit log export for all cases and system events.</div>
+                <div className="text-gray-500 mt-0.5">Download HMAC-verified audit log export for all cases and system events.</div>
               </div>
               <button
                 onClick={handleExportAllAuditLogs}
-                className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition flex items-center gap-1.5 shadow-lg shadow-emerald-500/20"
+                className="px-3.5 py-1.5 rounded-lg bg-gray-900 hover:bg-black text-white font-medium text-xs transition flex items-center gap-1.5 shadow-xs"
               >
                 <Download className="w-3.5 h-3.5" />
                 Export JSON
               </button>
             </div>
 
-            <div className="p-4 rounded-xl bg-slate-850 border border-slate-800 flex items-center justify-between">
+            <div className="p-4 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-between">
               <div>
-                <div className="font-semibold text-slate-200 flex items-center gap-2">
-                  <HardDrive className="w-4 h-4 text-blue-400" />
+                <div className="font-medium text-gray-900 flex items-center gap-2">
+                  <HardDrive className="w-4 h-4 text-gray-700" />
                   Storage Utilization
                 </div>
-                <div className="text-slate-400 mt-0.5">
+                <div className="text-gray-500 mt-0.5">
                   {evidenceList.length} files using {totalStorageMB.toFixed(2)} MB of evidential vault storage.
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-lg font-black text-blue-400">{totalStorageMB.toFixed(1)} MB</div>
-                <div className="text-[10px] text-slate-400">of evidence stored</div>
+                <div className="text-base font-bold text-gray-900 font-mono">{totalStorageMB.toFixed(1)} MB</div>
+                <div className="text-[10px] text-gray-500 font-mono">of evidence stored</div>
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-red-900/20 border border-red-500/30 flex items-center justify-between">
+            <div className="p-4 rounded-lg bg-red-50/50 border border-red-200 flex items-center justify-between">
               <div>
-                <div className="font-semibold text-red-300 flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-red-400" />
+                <div className="font-medium text-red-900 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-red-600" />
                   Clear All Mock & Demo Data
                 </div>
-                <div className="text-slate-400 mt-0.5">
+                <div className="text-red-700/80 mt-0.5">
                   Purges all simulated cases, mock evidence files, demo transcripts, and bookmarks, resetting GLEIS to a pristine empty state.
                 </div>
               </div>
@@ -373,20 +372,20 @@ export const SettingsPage: React.FC = () => {
                     alert('All mock data has been purged from the system.');
                   }
                 }}
-                className="px-4 py-2 rounded-lg bg-red-700 hover:bg-red-600 text-white font-bold text-xs transition flex items-center gap-1.5"
+                className="px-3.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium text-xs transition flex items-center gap-1.5 shadow-xs shrink-0"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 Purge Mock Data
               </button>
             </div>
 
-            <div className="p-4 rounded-xl bg-slate-850 border border-slate-800 flex items-center justify-between">
+            <div className="p-4 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-between">
               <div>
-                <div className="font-semibold text-slate-200 flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-amber-400" />
+                <div className="font-medium text-gray-900 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-gray-600" />
                   Clear Local Session Cache
                 </div>
-                <div className="text-slate-400 mt-0.5">
+                <div className="text-gray-500 mt-0.5">
                   Wipes browser localStorage and IndexedDB cache (uploaded evidence blobs).
                 </div>
               </div>
@@ -397,7 +396,7 @@ export const SettingsPage: React.FC = () => {
                     window.location.reload();
                   }
                 }}
-                className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs transition flex items-center gap-1.5"
+                className="px-3.5 py-1.5 rounded-lg bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 font-medium text-xs transition flex items-center gap-1.5 shadow-xs shrink-0"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 Clear Cache
@@ -408,10 +407,10 @@ export const SettingsPage: React.FC = () => {
       )}
 
       {/* Firebase & Compliance Info */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-        <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-          <ShieldCheck className="w-4 h-4 text-amber-400" />
-          <h2 className="text-sm font-bold text-slate-100">System & Compliance Information</h2>
+      <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 shadow-xs">
+        <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+          <ShieldCheck className="w-4 h-4 text-gray-800" />
+          <h2 className="text-sm font-semibold text-gray-900">System & Compliance Information</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
           {[
@@ -424,11 +423,11 @@ export const SettingsPage: React.FC = () => {
             { label: 'Voice Search', val: 'Web Speech STT (English / Dialect)', icon: Mic },
             { label: 'GLEIS Version', val: 'v1.0.0 — Judicial Service Build', icon: Settings },
           ].map(({ label, val, icon: Icon }) => (
-            <div key={label} className="p-3 rounded-xl bg-slate-850 border border-slate-800 flex items-center gap-3">
-              <Icon className="w-4 h-4 text-amber-400 shrink-0" />
+            <div key={label} className="p-3 rounded-lg bg-gray-50 border border-gray-200 flex items-center gap-3">
+              <Icon className="w-4 h-4 text-gray-700 shrink-0" />
               <div>
-                <div className="text-slate-400">{label}</div>
-                <div className="font-semibold text-slate-200">{val}</div>
+                <div className="text-gray-500 text-[11px]">{label}</div>
+                <div className="font-medium text-gray-900">{val}</div>
               </div>
             </div>
           ))}
@@ -436,13 +435,13 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       {/* Save Button */}
-      <div className="flex justify-end">
+      <div className="flex justify-end pt-2">
         <button
           onClick={handleSave}
-          className={`px-6 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg ${
+          className={`px-5 py-2.5 rounded-lg text-xs font-medium transition flex items-center gap-2 shadow-xs ${
             saved
-              ? 'bg-emerald-500 text-slate-950 shadow-emerald-500/20'
-              : 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/20'
+              ? 'bg-emerald-600 text-white'
+              : 'bg-gray-900 hover:bg-black text-white'
           }`}
         >
           {saved ? (

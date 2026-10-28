@@ -20,11 +20,11 @@ export const DocumentViewerPage: React.FC = () => {
   if (!docEvidence || docEvidence.fileType !== 'document') {
     return (
       <div className="max-w-4xl mx-auto py-16 text-center space-y-4">
-        <div className="w-14 h-14 mx-auto rounded-full bg-slate-800 flex items-center justify-center text-blue-400">
+        <div className="w-14 h-14 mx-auto rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-700 shadow-xs">
           <FileText className="w-7 h-7" />
         </div>
-        <h2 className="text-lg font-bold text-slate-200">No Document Evidence Selected</h2>
-        <p className="text-xs text-slate-400 max-w-md mx-auto">
+        <h2 className="text-lg font-semibold text-gray-900">No Document Evidence Selected</h2>
+        <p className="text-sm text-gray-500 max-w-md mx-auto">
           Please select a document exhibit from Case Management or upload a PDF, DOCX, or scanned exhibit.
         </p>
       </div>

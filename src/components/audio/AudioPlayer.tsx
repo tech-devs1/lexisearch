@@ -17,8 +17,7 @@ import {
   X,
   Loader2,
   CheckCircle2,
-  AlertCircle,
-  Key
+  AlertCircle
 } from 'lucide-react';
 import { EvidenceFile, TranscriptSegment } from '../../types/evidence';
 import { formatSecondsToTimestamp, transcribeAudioFile } from '../../services/audioProcessor';
@@ -150,131 +149,108 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     }
   }, [volume, isMuted]);
 
-  // Track active segment based on current time
+  // Track active transcript segment based on currentTime
   useEffect(() => {
-    if (!evidence.segments || evidence.segments.length === 0) return;
-    const idx = evidence.segments.findIndex(
+    const segments = editedSegments.length > 0 ? editedSegments : evidence.segments;
+    if (!segments || segments.length === 0) return;
+
+    const idx = segments.findIndex(
       (s) => currentTime >= s.startTime && currentTime <= s.endTime
     );
+
     if (idx !== -1 && idx !== activeSegmentIndex) {
       setActiveSegmentIndex(idx);
-      // Auto-scroll transcript container
+
+      // Auto-scroll transcript container smoothly to keep speaker in view
       const activeEl = document.getElementById(`seg-row-${idx}`);
       if (activeEl && transcriptContainerRef.current) {
-        activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        const container = transcriptContainerRef.current;
+        const offsetTop = activeEl.offsetTop - container.offsetTop;
+        container.scrollTo({ top: offsetTop - 60, behavior: 'smooth' });
       }
     }
-  }, [currentTime, evidence.segments, activeSegmentIndex]);
+  }, [currentTime, editedSegments, evidence.segments, activeSegmentIndex]);
 
-  // Speak segment when using speech synthesis fallback
-  const speakCurrentSegment = useCallback((text: string) => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = playbackRate;
-    utterance.volume = isMuted ? 0 : volume;
-    speechUtteranceRef.current = utterance;
-
-    utterance.onend = () => {
-      if (isPlaying && evidence.segments) {
-        const nextIdx = activeSegmentIndex + 1;
-        if (nextIdx < evidence.segments.length) {
-          seekTo(evidence.segments[nextIdx].startTime);
-        } else {
-          setIsPlaying(false);
-        }
-      }
-    };
-
-    window.speechSynthesis.speak(utterance);
-  }, [playbackRate, isMuted, volume, isPlaying, evidence.segments, activeSegmentIndex]);
-
-  // Simulated timer ticker when speech synthesis / simulated playback is active
-  useEffect(() => {
-    let interval: any;
-    if (isPlaying && !audioUrl) {
-      interval = setInterval(() => {
-        setCurrentTime((prev) => {
-          if (prev >= duration) {
-            setIsPlaying(false);
-            if (typeof window !== 'undefined' && window.speechSynthesis) {
-              window.speechSynthesis.cancel();
-            }
-            return 0;
-          }
-          const next = prev + 0.25 * playbackRate;
-          return parseFloat(next.toFixed(2));
-        });
-      }, 250);
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying, audioUrl, duration, playbackRate]);
-
-  // Trigger speech synthesis when active segment changes in simulated mode
-  useEffect(() => {
-    if (isPlaying && !audioUrl && evidence.segments && evidence.segments[activeSegmentIndex]) {
-      speakCurrentSegment(evidence.segments[activeSegmentIndex].text);
-    }
-  }, [activeSegmentIndex, isPlaying, audioUrl, evidence.segments, speakCurrentSegment]);
-
-  const togglePlay = async () => {
-    if (audioUrl && audioRef.current) {
+  // Toggle Play / Pause
+  const togglePlay = useCallback(() => {
+    if (audioRef.current && audioUrl) {
       if (isPlaying) {
         audioRef.current.pause();
         setIsPlaying(false);
       } else {
-        try {
-          await audioRef.current.play();
+        audioRef.current.play().then(() => {
           setIsPlaying(true);
-        } catch (err) {
-          console.warn('Initial audio playback attempt failed, trying IndexedDB blob recovery:', err);
-          try {
-            const freshUrl = await getEvidenceBlobUrl(evidence.id);
-            if (freshUrl && audioRef.current) {
-              setAudioUrl(freshUrl);
-              audioRef.current.src = freshUrl;
-              await audioRef.current.play();
-              setIsPlaying(true);
-              return;
-            }
-          } catch (retryErr) {
-            console.error('Audio playback recovery error:', retryErr);
-          }
-        }
+        }).catch((err) => {
+          console.warn('Playback error, falling back to speech synthesis:', err);
+          playSpeechSynthesis(currentTime);
+        });
       }
     } else {
+      // Audio file not loaded directly -> Speech Synthesis fallback
       if (isPlaying) {
-        if (typeof window !== 'undefined' && window.speechSynthesis) {
-          window.speechSynthesis.cancel();
-        }
-        setIsPlaying(false);
+        stopSpeechSynthesis();
       } else {
-        setIsPlaying(true);
-        if (evidence.segments && evidence.segments[activeSegmentIndex]) {
-          speakCurrentSegment(evidence.segments[activeSegmentIndex].text);
-        }
+        playSpeechSynthesis(currentTime);
       }
     }
-  };
+  }, [isPlaying, audioUrl, currentTime]);
 
+  // Seek audio to specific second
   const seekTo = (seconds: number) => {
-    const clamped = Math.max(0, Math.min(duration, seconds));
+    const clamped = Math.max(0, Math.min(seconds, duration));
     setCurrentTime(clamped);
 
     if (audioRef.current && audioUrl) {
       audioRef.current.currentTime = clamped;
-    }
-
-    if (!audioUrl && isPlaying && typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-      const seg = evidence.segments?.find(s => clamped >= s.startTime && clamped <= s.endTime);
-      if (seg) {
-        speakCurrentSegment(seg.text);
-      }
+    } else if (isPlaying) {
+      stopSpeechSynthesis();
+      playSpeechSynthesis(clamped);
     }
   };
 
+  // Speech synthesis fallback implementation
+  const playSpeechSynthesis = (startSec: number) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+
+    window.speechSynthesis.cancel();
+    setUsingSynthesizedSpeech(true);
+
+    const segments = editedSegments.length > 0 ? editedSegments : evidence.segments || [];
+    const remainingSegments = segments.filter((s) => s.endTime >= startSec);
+    const combinedText = remainingSegments.map((s) => `${s.speakerLabel}: ${s.text}`).join('. ');
+
+    if (!combinedText.trim()) return;
+
+    const utterance = new SpeechSynthesisUtterance(combinedText);
+    utterance.rate = playbackRate;
+    utterance.pitch = 1.0;
+
+    utterance.onstart = () => {
+      setIsPlaying(true);
+    };
+
+    utterance.onend = () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
+    };
+
+    utterance.onerror = (e) => {
+      console.warn('Speech synthesis error:', e);
+      setIsPlaying(false);
+    };
+
+    speechUtteranceRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const stopSpeechSynthesis = () => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    setIsPlaying(false);
+  };
+
+  // Bookmark a segment
   const handleCreateBookmark = async (seg: TranscriptSegment) => {
     await addBookmark({
       caseId: evidence.caseId,
@@ -282,69 +258,70 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       fileName: evidence.fileName,
       type: 'audio',
       timestamp: seg.startTime,
-      timestampDisplay: formatSecondsToTimestamp(seg.startTime),
-      passageSnippet: `[${seg.speakerLabel || 'Speaker'}]: ${seg.text}`,
-      note: 'Bookmarked from interactive transcript player.',
-      tags: ['Court Transcript', seg.speakerLabel || 'Testimony'],
+      timestampDisplay: `${formatSecondsToTimestamp(seg.startTime)} - ${formatSecondsToTimestamp(seg.endTime)}`,
+      passageSnippet: seg.text,
+      note: `Bookmarked from synchronized audio playback (${seg.speakerLabel}).`,
+      tags: [seg.speakerLabel || 'Speaker', 'Audio Testimony'],
     });
 
     setBookmarkSuccess(seg.id);
     setTimeout(() => setBookmarkSuccess(null), 2500);
   };
 
-  // Perform AI Speech-to-Text Transcription
+  // Run AI Re-transcription (Gemini 1.5 or OpenAI Whisper)
   const handleRunTranscription = async () => {
     setIsTranscribing(true);
-    setTranscribeStatus('Extracting audio stream from evidentiary vault...');
     setTranscribeError('');
-    setTranscribeSuccess(false);
+    setTranscribeStatus('Retrieving evidence binary from secure vault...');
 
     try {
-      // 1. Save keys if entered
-      if (typeof localStorage !== 'undefined') {
-        if (geminiKeyInput.trim()) localStorage.setItem('gleis_gemini_api_key', geminiKeyInput.trim());
-        if (openaiKeyInput.trim()) localStorage.setItem('gleis_openai_api_key', openaiKeyInput.trim());
+      if (geminiKeyInput.trim() && typeof localStorage !== 'undefined') {
+        localStorage.setItem('gleis_gemini_api_key', geminiKeyInput.trim());
+      }
+      if (openaiKeyInput.trim() && typeof localStorage !== 'undefined') {
+        localStorage.setItem('gleis_openai_api_key', openaiKeyInput.trim());
       }
 
-      // 2. Retrieve audio binary blob
-      let audioBlob: Blob | null = await getEvidenceBlob(evidence.id);
+      let audioBlob = await getEvidenceBlob(evidence.id);
+
       if (!audioBlob && audioUrl) {
+        setTranscribeStatus('Fetching audio stream...');
         const resp = await fetch(audioUrl);
         audioBlob = await resp.blob();
       }
 
       if (!audioBlob) {
-        throw new Error('Unable to retrieve the original audio file binary from local vault or remote storage.');
+        throw new Error('Could not retrieve audio file blob. Please re-upload the audio file.');
       }
 
-      setTranscribeStatus(`Processing speech with ${transcribeEngine === 'gemini' ? 'Google Gemini 1.5 Flash' : transcribeEngine === 'whisper' ? 'OpenAI Whisper' : 'In-Browser Speech Engine'}...`);
+      setTranscribeStatus(
+        transcribeEngine === 'gemini'
+          ? 'Transcribing Ghanaian legal testimony with Google Gemini 1.5 Flash...'
+          : 'Transcribing word timestamps with OpenAI Whisper...'
+      );
 
-      // 3. Transcribe audio with selected options
-      const result = await transcribeAudioFile(audioBlob, evidence.id, {
-        geminiKey: transcribeEngine === 'gemini' ? (geminiKeyInput || undefined) : undefined,
-        apiKey: transcribeEngine === 'whisper' ? (openaiKeyInput || undefined) : undefined,
+      const audioFile = new File([audioBlob], evidence.fileName, { type: audioBlob.type || 'audio/mp3' });
+      const result = await transcribeAudioFile(audioFile, {
+        engine: transcribeEngine,
+        apiKey: transcribeEngine === 'gemini' ? geminiKeyInput : openaiKeyInput,
+        language: 'en-GH',
       });
 
-      if (!result || !result.segments || result.segments.length === 0) {
-        throw new Error('Transcription engine produced no transcript segments. Check API key validity or audio quality.');
-      }
+      setTranscribeStatus('Updating evidence transcript and indexing...');
 
-      setTranscribeStatus('Updating evidentiary case ledger and search index...');
-
-      // 4. Update evidence in state & IndexedDB
       await updateEvidence(evidence.id, {
         segments: result.segments,
-        durationSeconds: result.durationSeconds,
-        speakerCount: result.speakerCount,
-        statusMessage: `AI transcribed ${result.segments.length} segments with speaker diarization.`,
+        durationSeconds: result.durationSeconds || duration,
+        speakerCount: result.speakerCount || 2,
+        statusMessage: `Transcribed via ${result.engine.toUpperCase()}`,
       });
 
-      setDuration(result.durationSeconds);
       setEditedSegments(result.segments);
+      setDuration(result.durationSeconds || duration);
       setTranscribeSuccess(true);
+      setIsTranscribing(false);
 
       setTimeout(() => {
-        setIsTranscribing(false);
         setShowTranscribeModal(false);
         setTranscribeSuccess(false);
       }, 1500);
@@ -372,7 +349,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col h-full">
+    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-xs flex flex-col h-full">
       {/* Hidden Native Audio Element for Real Sound Playback */}
       {audioUrl && (
         <audio
@@ -414,36 +391,36 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       )}
 
       {/* Player Header & Metadata */}
-      <div className="p-4 lg:p-6 bg-slate-900 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4">
+      <div className="p-4 lg:p-5 bg-white border-b border-gray-100 flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded text-[10px] font-medium tracking-wide bg-slate-800 text-slate-300 border border-slate-700">
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-gray-100 text-gray-700 border border-gray-200 font-medium">
               Legal Audio Evidence
             </span>
-            <span className="text-xs text-slate-400 font-mono">
+            <span className="text-xs text-gray-500 font-mono">
               SHA-256: {formatHashTruncated(evidence.sha256Hash, 8)}
             </span>
             {usingSynthesizedSpeech && (
-              <span className="px-2 py-0.5 rounded text-[10px] font-medium tracking-wide bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center gap-1">
-                <Sparkles className="w-3 h-3" />
+              <span className="px-2 py-0.5 rounded text-[10px] font-medium tracking-wide bg-gray-100 text-gray-700 border border-gray-200 flex items-center gap-1 font-mono">
+                <Sparkles className="w-3 h-3 text-gray-500" />
                 Speech Synthesis Active
               </span>
             )}
           </div>
-          <h2 className="text-base lg:text-lg font-semibold text-slate-100 mt-1 flex items-center gap-2">
+          <h2 className="text-base lg:text-lg font-bold text-gray-900 mt-1 flex items-center gap-2">
             {evidence.fileName}
           </h2>
-          <div className="flex items-center gap-4 text-xs text-slate-400 mt-1">
+          <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
             <span className="flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5 text-blue-400" />
+              <Clock className="w-3.5 h-3.5 text-gray-500" />
               Duration: {formatSecondsToTimestamp(duration)}
             </span>
             <span className="flex items-center gap-1">
-              <Users className="w-3.5 h-3.5 text-slate-400" />
+              <Users className="w-3.5 h-3.5 text-gray-500" />
               {evidence.speakerCount || 2} Identified Speakers
             </span>
-            <span className="flex items-center gap-1 text-emerald-400">
-              <ShieldCheck className="w-3.5 h-3.5" />
+            <span className="flex items-center gap-1 text-emerald-700 font-medium">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
               Cryptographically Sealed
             </span>
           </div>
@@ -452,16 +429,16 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         {/* Playback Rate & Volume Controls */}
         <div className="flex items-center gap-4">
           {/* Volume Slider & Mute Toggle */}
-          <div className="flex items-center gap-2 bg-slate-850 px-3 py-1.5 rounded-lg border border-slate-800">
+          <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
             <button
               onClick={() => setIsMuted(!isMuted)}
-              className="text-slate-300 hover:text-white"
+              className="text-gray-600 hover:text-gray-900"
               title={isMuted ? 'Unmute' : 'Mute'}
             >
               {isMuted || volume === 0 ? (
-                <VolumeX className="w-4 h-4 text-rose-400" />
+                <VolumeX className="w-4 h-4 text-red-600" />
               ) : (
-                <Volume2 className="w-4 h-4 text-slate-300" />
+                <Volume2 className="w-4 h-4 text-gray-600" />
               )}
             </button>
             <input
@@ -475,22 +452,22 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                 setVolume(newVol);
                 if (newVol > 0 && isMuted) setIsMuted(false);
               }}
-              className="w-16 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+              className="w-16 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900"
               title="Volume control"
             />
           </div>
 
           {/* Speed Selectors */}
           <div className="flex items-center gap-1">
-            <span className="text-xs text-slate-400 mr-1">Speed:</span>
+            <span className="text-xs text-gray-500 mr-1 font-mono">Speed:</span>
             {[0.75, 1, 1.25, 1.5, 2].map((rate) => (
               <button
                 key={rate}
                 onClick={() => setPlaybackRate(rate)}
                 className={`px-2 py-1 rounded text-xs font-medium transition ${
                   playbackRate === rate
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-850 text-slate-400 hover:text-white border border-slate-800'
+                    ? 'bg-gray-900 text-white shadow-xs'
+                    : 'bg-white text-gray-600 hover:text-gray-900 border border-gray-200'
                 }`}
               >
                 {rate}x
@@ -501,9 +478,9 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       </div>
 
       {/* Waveform & Scrubber Control */}
-      <div className="px-6 py-4 bg-slate-900 border-b border-slate-800">
-        <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-2">
-          <span className="text-blue-400 font-medium">{formatSecondsToTimestamp(currentTime)}</span>
+      <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+        <div className="flex items-center justify-between text-xs font-mono text-gray-500 mb-2">
+          <span className="text-gray-900 font-semibold">{formatSecondsToTimestamp(currentTime)}</span>
           <span>{formatSecondsToTimestamp(duration)}</span>
         </div>
 
@@ -515,20 +492,20 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
             const pct = Math.max(0, Math.min(1, clickX / rect.width));
             seekTo(pct * duration);
           }}
-          className="h-2 bg-slate-800 rounded-full cursor-pointer relative overflow-hidden group"
+          className="h-2 bg-gray-200 rounded-full cursor-pointer relative overflow-hidden group"
         >
           <div
-            className="h-full bg-blue-500 relative rounded-full transition-all duration-75"
+            className="h-full bg-gray-900 relative rounded-full transition-all duration-75"
             style={{ width: `${Math.min(100, (currentTime / (duration || 1)) * 100)}%` }}
           />
-          <div className="absolute inset-0 bg-blue-400/10 opacity-0 group-hover:opacity-100 transition" />
+          <div className="absolute inset-0 bg-gray-900/10 opacity-0 group-hover:opacity-100 transition" />
         </div>
 
         {/* Transport buttons */}
         <div className="flex items-center justify-center gap-4 mt-4">
           <button
             onClick={() => seekTo(currentTime - 5)}
-            className="p-2 rounded-lg bg-slate-850 hover:bg-slate-800 border border-slate-800 text-slate-300 transition"
+            className="p-2 rounded-lg bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 shadow-xs transition"
             title="Rewind 5 seconds"
           >
             <RotateCcw className="w-4 h-4" />
@@ -536,7 +513,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
           <button
             onClick={togglePlay}
-            className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-medium flex items-center justify-center shadow-md shadow-blue-600/25 active:scale-95 transition"
+            className="w-12 h-12 rounded-full bg-gray-900 hover:bg-black text-white font-medium flex items-center justify-center shadow-xs active:scale-95 transition"
             title={isPlaying ? 'Pause Audio' : 'Play Audio'}
           >
             {isPlaying ? <Pause className="w-5 h-5 fill-white" /> : <Play className="w-5 h-5 fill-white ml-0.5" />}
@@ -544,7 +521,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
           <button
             onClick={() => seekTo(currentTime + 5)}
-            className="p-2 rounded-lg bg-slate-850 hover:bg-slate-800 border border-slate-800 text-slate-300 transition"
+            className="p-2 rounded-lg bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 shadow-xs transition"
             title="Forward 5 seconds"
           >
             <RotateCw className="w-4 h-4" />
@@ -553,11 +530,11 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       </div>
 
       {/* Synchronized Transcripts Header & Diarization Actions */}
-      <div className="flex-1 flex flex-col min-h-0 bg-slate-900/50">
-        <div className="px-6 py-3 bg-slate-900 border-b border-slate-800 flex flex-wrap items-center justify-between text-xs font-semibold text-slate-300 gap-2">
+      <div className="flex-1 flex flex-col min-h-0 bg-[#F8F8F8]">
+        <div className="px-6 py-3 bg-white border-b border-gray-100 flex flex-wrap items-center justify-between text-xs font-semibold text-gray-700 gap-2">
           <div className="flex items-center gap-2">
-            <MessageSquareQuote className="w-4 h-4 text-blue-400" />
-            <span className="tracking-wide">SYNCHRONIZED TRANSCRIPT WITH SPEAKER LABELS</span>
+            <MessageSquareQuote className="w-4 h-4 text-gray-700" />
+            <span className="tracking-wide font-mono uppercase text-gray-900">SYNCHRONIZED TRANSCRIPT WITH SPEAKER LABELS</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -565,7 +542,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
               <>
                 <button
                   onClick={() => setIsEditingTranscript(false)}
-                  className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-normal transition text-xs flex items-center gap-1"
+                  className="px-2.5 py-1 rounded-lg bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 font-normal transition text-xs flex items-center gap-1"
                 >
                   <X className="w-3.5 h-3.5" />
                   <span>Cancel</span>
@@ -573,7 +550,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                 <button
                   onClick={handleSaveTranscriptEdits}
                   disabled={isSavingEdit}
-                  className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white font-medium transition text-xs flex items-center gap-1 shadow-sm"
+                  className="px-3 py-1 rounded-lg bg-gray-900 hover:bg-black text-white font-medium transition text-xs flex items-center gap-1 shadow-xs"
                 >
                   <Save className="w-3.5 h-3.5" />
                   <span>{isSavingEdit ? 'Saving...' : 'Save Transcript'}</span>
@@ -583,15 +560,15 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
               <>
                 <button
                   onClick={() => setIsEditingTranscript(true)}
-                  className="px-2.5 py-1 rounded bg-slate-850 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-normal transition text-xs flex items-center gap-1"
+                  className="px-2.5 py-1 rounded-lg bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 hover:text-black font-medium transition text-xs flex items-center gap-1 shadow-xs"
                   title="Edit speaker labels and transcript text directly"
                 >
-                  <Edit3 className="w-3.5 h-3.5 text-slate-400" />
+                  <Edit3 className="w-3.5 h-3.5 text-gray-500" />
                   <span>Edit Transcript</span>
                 </button>
                 <button
                   onClick={() => setShowTranscribeModal(true)}
-                  className="px-3 py-1 rounded bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/30 text-blue-400 hover:text-blue-300 font-medium transition text-xs flex items-center gap-1.5"
+                  className="px-3 py-1 rounded-lg bg-gray-900 hover:bg-black text-white font-medium transition text-xs flex items-center gap-1.5 shadow-xs"
                   title="Run speech-to-text with Gemini or Whisper"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
@@ -605,7 +582,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         {/* Transcript Segments List */}
         <div
           ref={transcriptContainerRef}
-          className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-3 divide-y divide-slate-800/40"
+          className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-3"
         >
           {editedSegments.map((seg, idx) => {
             const isActive = activeSegmentIndex === idx;
@@ -615,12 +592,12 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
               <div
                 key={seg.id}
                 id={`seg-row-${idx}`}
-                className={`pt-3 rounded-xl p-3.5 transition ${
+                className={`p-3.5 rounded-xl border transition ${
                   isActive
-                    ? 'bg-blue-600/10 border border-blue-500/30'
+                    ? 'bg-white border-gray-900 shadow-xs ring-1 ring-gray-900'
                     : isMatch
-                    ? 'bg-slate-800 border border-slate-700'
-                    : 'hover:bg-slate-850/60'
+                    ? 'bg-amber-50/70 border-amber-300 shadow-xs'
+                    : 'bg-white border-gray-200 hover:border-gray-300 shadow-xs'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
@@ -633,20 +610,12 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                           const val = e.target.value;
                           setEditedSegments(prev => prev.map((s, i) => i === idx ? { ...s, speakerLabel: val } : s));
                         }}
-                        className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-xs text-blue-300 font-semibold focus:outline-none focus:border-blue-500 w-44"
+                        className="px-2 py-0.5 rounded-lg bg-white border border-gray-300 text-xs text-gray-900 font-semibold focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900 w-44"
                         placeholder="Speaker Label (e.g. Judge)"
                       />
                     ) : (
                       <span
-                        className={`text-xs font-medium px-2 py-0.5 rounded ${
-                          seg.speakerLabel?.includes('Judge')
-                            ? 'bg-purple-950/70 text-purple-300 border border-purple-800/50'
-                            : seg.speakerLabel?.includes('Attorney') || seg.speakerLabel?.includes('Prosecution')
-                            ? 'bg-rose-950/70 text-rose-300 border border-rose-800/50'
-                            : seg.speakerLabel?.includes('Counsel')
-                            ? 'bg-blue-950/70 text-blue-300 border border-blue-800/50'
-                            : 'bg-slate-800 text-slate-300 border border-slate-700'
-                        }`}
+                        className="text-xs font-mono font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-800 border border-gray-200"
                       >
                         {seg.speakerLabel || 'Speaker'}
                       </span>
@@ -654,7 +623,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
                     <button
                       onClick={() => seekTo(seg.startTime)}
-                      className="text-xs font-mono text-blue-400 hover:underline flex items-center gap-1"
+                      className="text-xs font-mono text-gray-600 hover:text-black hover:underline flex items-center gap-1 font-medium"
                     >
                       [{formatSecondsToTimestamp(seg.startTime)} - {formatSecondsToTimestamp(seg.endTime)}]
                     </button>
@@ -664,8 +633,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                     onClick={() => handleCreateBookmark(seg)}
                     className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded transition ${
                       bookmarkSuccess === seg.id
-                        ? 'bg-emerald-500/20 text-emerald-300'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                        ? 'bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200'
+                        : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
                     }`}
                     title="Bookmark this testimony segment"
                   >
@@ -683,13 +652,13 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                       const val = e.target.value;
                       setEditedSegments(prev => prev.map((s, i) => i === idx ? { ...s, text: val } : s));
                     }}
-                    className="w-full mt-1 px-3 py-2 bg-slate-850 border border-slate-700 rounded-lg text-sm text-slate-100 font-sans focus:outline-none focus:border-blue-500 resize-y"
+                    className="w-full mt-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 font-sans focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900 resize-y"
                   />
                 ) : (
                   <p
                     onClick={() => seekTo(seg.startTime)}
                     className={`text-sm leading-relaxed cursor-pointer ${
-                      isActive ? 'text-slate-100 font-medium' : 'text-slate-300'
+                      isActive ? 'text-gray-950 font-medium' : 'text-gray-700'
                     }`}
                   >
                     {seg.words && seg.words.length > 0 ? (
@@ -706,10 +675,10 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                             }}
                             className={`inline-block mr-1 rounded px-0.5 transition ${
                               isWordActive
-                                ? 'bg-blue-500 text-white font-medium scale-105'
+                                ? 'bg-gray-900 text-white font-medium scale-105'
                                 : isWordQuery
-                                ? 'bg-blue-900/50 text-blue-200 font-semibold'
-                                : 'hover:text-blue-300'
+                                ? 'bg-gray-200 text-gray-950 font-semibold'
+                                : 'hover:text-black'
                             }`}
                           >
                             {w.word}
@@ -729,27 +698,27 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
       {/* AI Speech Transcription Modal */}
       {showTranscribeModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-gray-200 rounded-xl max-w-lg w-full p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <div className="flex items-center gap-2">
-                <span className="w-7 h-7 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4" />
+                <span className="w-7 h-7 rounded-md bg-gray-100 border border-gray-200 text-gray-800 flex items-center justify-center font-bold">
+                  <Sparkles className="w-3.5 h-3.5" />
                 </span>
-                <h3 className="text-base font-semibold text-slate-100">Transcribe Audio Evidence</h3>
+                <h3 className="text-sm font-semibold text-gray-900">Transcribe Audio Evidence</h3>
               </div>
               <button
                 onClick={() => setShowTranscribeModal(false)}
                 disabled={isTranscribing}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-40"
+                className="p-1 rounded-md text-gray-400 hover:text-gray-700 disabled:opacity-40"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-3 bg-slate-850 rounded-xl border border-slate-800 text-xs text-slate-300 space-y-1">
-              <div className="font-semibold text-slate-100">{evidence.fileName}</div>
-              <div className="text-slate-400 flex items-center gap-3">
+            <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 text-xs text-gray-700 space-y-1">
+              <div className="font-semibold text-gray-900">{evidence.fileName}</div>
+              <div className="text-gray-500 flex items-center gap-3 font-mono text-[11px]">
                 <span>Duration: {formatSecondsToTimestamp(duration)}</span>
                 <span>SHA-256: {formatHashTruncated(evidence.sha256Hash, 8)}</span>
               </div>
@@ -757,7 +726,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
             {/* Select Engine */}
             <div className="space-y-3">
-              <label className="block text-xs font-semibold text-slate-300">
+              <label className="block text-xs font-semibold text-gray-700 font-mono text-[11px]">
                 Select Speech-to-Text Engine:
               </label>
 
@@ -767,15 +736,15 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                   onClick={() => setTranscribeEngine('gemini')}
                   className={`p-3 rounded-xl border text-left transition ${
                     transcribeEngine === 'gemini'
-                      ? 'bg-blue-600/10 border-blue-500 text-blue-200'
-                      : 'bg-slate-850 border-slate-800 text-slate-400 hover:text-slate-200'
+                      ? 'bg-gray-50 border-gray-900 text-gray-900 ring-1 ring-gray-900 shadow-xs'
+                      : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                   }`}
                 >
-                  <div className="font-semibold text-xs text-slate-100 flex items-center justify-between">
+                  <div className="font-semibold text-xs text-gray-900 flex items-center justify-between">
                     <span>Google Gemini 1.5</span>
-                    <span className="text-[10px] px-1.5 py-0.2 bg-blue-600/30 text-blue-300 rounded">Best</span>
+                    <span className="text-[10px] px-1.5 py-0.2 bg-gray-200 text-gray-900 font-mono rounded">Best</span>
                   </div>
-                  <div className="text-[11px] text-slate-400 mt-1">
+                  <div className="text-[11px] text-gray-500 mt-1">
                     Multimodal audio transcription with Ghanaian legal diarization.
                   </div>
                 </button>
@@ -785,14 +754,14 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                   onClick={() => setTranscribeEngine('whisper')}
                   className={`p-3 rounded-xl border text-left transition ${
                     transcribeEngine === 'whisper'
-                      ? 'bg-blue-600/10 border-blue-500 text-blue-200'
-                      : 'bg-slate-850 border-slate-800 text-slate-400 hover:text-slate-200'
+                      ? 'bg-gray-50 border-gray-900 text-gray-900 ring-1 ring-gray-900 shadow-xs'
+                      : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                   }`}
                 >
-                  <div className="font-semibold text-xs text-slate-100">
+                  <div className="font-semibold text-xs text-gray-900">
                     OpenAI Whisper
                   </div>
-                  <div className="text-[11px] text-slate-400 mt-1">
+                  <div className="text-[11px] text-gray-500 mt-1">
                     Word-level timestamp granularities and segment alignment.
                   </div>
                 </button>
@@ -801,7 +770,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
               {/* Key Input if chosen */}
               {transcribeEngine === 'gemini' && (
                 <div>
-                  <label className="block text-xs text-slate-300 mb-1">
+                  <label className="block text-xs text-gray-700 font-mono text-[11px] mb-1">
                     Google Gemini API Key:
                   </label>
                   <input
@@ -809,14 +778,14 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                     value={geminiKeyInput}
                     onChange={(e) => setGeminiKeyInput(e.target.value)}
                     placeholder="AIzaSy..."
-                    className="w-full px-3 py-2 bg-slate-850 border border-slate-700 rounded-lg text-slate-200 font-mono text-xs focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 font-mono text-xs focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                   />
                 </div>
               )}
 
               {transcribeEngine === 'whisper' && (
                 <div>
-                  <label className="block text-xs text-slate-300 mb-1">
+                  <label className="block text-xs text-gray-700 font-mono text-[11px] mb-1">
                     OpenAI API Key:
                   </label>
                   <input
@@ -824,7 +793,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                     value={openaiKeyInput}
                     onChange={(e) => setOpenaiKeyInput(e.target.value)}
                     placeholder="sk-proj-..."
-                    className="w-full px-3 py-2 bg-slate-850 border border-slate-700 rounded-lg text-slate-200 font-mono text-xs focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 font-mono text-xs focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                   />
                 </div>
               )}
@@ -832,32 +801,32 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
             {/* Status & Alerts */}
             {isTranscribing && (
-              <div className="p-3 bg-blue-600/10 border border-blue-500/30 rounded-xl flex items-center gap-2.5 text-blue-300 text-xs">
-                <Loader2 className="w-4 h-4 animate-spin text-blue-400 shrink-0" />
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-2.5 text-gray-800 text-xs">
+                <Loader2 className="w-4 h-4 animate-spin text-gray-900 shrink-0" />
                 <span>{transcribeStatus}</span>
               </div>
             )}
 
             {transcribeSuccess && (
-              <div className="p-3 bg-emerald-500/15 border border-emerald-500/30 rounded-xl flex items-center gap-2 text-emerald-300 text-xs">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2 text-emerald-800 text-xs">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>Audio transcribed, verified, and saved to case ledger successfully!</span>
               </div>
             )}
 
             {transcribeError && (
-              <div className="p-3 bg-rose-500/15 border border-rose-500/30 rounded-xl flex items-center gap-2 text-rose-300 text-xs">
-                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-800 text-xs">
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
                 <span>{transcribeError}</span>
               </div>
             )}
 
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
               <button
                 type="button"
                 onClick={() => setShowTranscribeModal(false)}
                 disabled={isTranscribing}
-                className="px-4 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-700 bg-white hover:bg-gray-100 border border-gray-300 transition"
               >
                 Cancel
               </button>
@@ -865,7 +834,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                 type="button"
                 onClick={handleRunTranscription}
                 disabled={isTranscribing || transcribeSuccess}
-                className="px-5 py-2 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white transition flex items-center gap-2 shadow-md shadow-blue-600/20"
+                className="px-4 py-1.5 rounded-lg text-xs font-medium bg-gray-900 hover:bg-black disabled:opacity-50 text-white transition flex items-center gap-2 shadow-xs"
               >
                 {isTranscribing ? (
                   <>

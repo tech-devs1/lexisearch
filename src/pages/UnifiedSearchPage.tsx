@@ -2,13 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
   Search, 
-  Sparkles, 
   Headphones, 
-  FileText, 
-  Layers, 
-  ArrowUpDown,
-  Filter,
-  CheckCircle2
+  FileText
 } from 'lucide-react';
 import { UnifiedSearchBar } from '../components/search/UnifiedSearchBar';
 import { SearchResultCard } from '../components/search/SearchResultCard';
@@ -116,16 +111,16 @@ export const UnifiedSearchPage: React.FC = () => {
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div>
+      <div className="border-b border-gray-200 pb-4">
         <div className="flex items-center gap-2">
-          <span className="w-7 h-7 rounded-md bg-blue-950/60 border border-blue-900/60 text-blue-400 flex items-center justify-center font-bold">
+          <span className="w-7 h-7 rounded-md bg-gray-100 border border-gray-200 text-gray-800 flex items-center justify-center font-bold">
             <Search className="w-3.5 h-3.5" />
           </span>
-          <h1 className="text-lg lg:text-xl font-bold text-slate-100">
+          <h1 className="text-lg lg:text-xl font-bold text-gray-900">
             Unified Evidentiary Search
           </h1>
         </div>
-        <p className="text-xs text-slate-400 mt-1">
+        <p className="text-xs text-gray-500 mt-1">
           Search across witness audio recordings, police statements, forensic financial ledgers, and court transcripts.
         </p>
       </div>
@@ -153,41 +148,47 @@ export const UnifiedSearchPage: React.FC = () => {
 
       {/* Results Statistics Bar */}
       {hasSearched && (
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#0F172A] border border-slate-800 rounded-lg px-4 py-2.5 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-xs shadow-xs">
           <div className="flex items-center gap-3">
-            <span className="font-semibold text-slate-200 font-mono text-[11px]">
+            <span className="font-semibold text-gray-900 font-mono text-[11px]">
               {totalMatches} {totalMatches === 1 ? 'Match' : 'Matches'}
             </span>
-            <span className="text-slate-400">•</span>
-            <span className="flex items-center gap-1.5 text-blue-400 font-mono text-[11px]">
-              <Headphones className="w-3 h-3" />
+            <span className="text-gray-300">•</span>
+            <span className="flex items-center gap-1.5 text-gray-700 font-mono text-[11px]">
+              <Headphones className="w-3.5 h-3.5 text-gray-500" />
               {audioCount} in Audio
             </span>
-            <span className="text-slate-400">•</span>
-            <span className="flex items-center gap-1.5 text-indigo-400 font-mono text-[11px]">
-              <FileText className="w-3 h-3" />
+            <span className="text-gray-300">•</span>
+            <span className="flex items-center gap-1.5 text-gray-700 font-mono text-[11px]">
+              <FileText className="w-3.5 h-3.5 text-gray-500" />
               {docCount} in Documents
             </span>
           </div>
 
           <div className="flex items-center gap-1.5">
-            <span className="text-slate-400 font-mono text-[10px]">VIEW:</span>
-            <button
-              onClick={() => setViewMode('grouped')}
-              className={`px-2 py-1 rounded text-xs font-medium transition ${
-                viewMode === 'grouped' ? 'bg-blue-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
-              }`}
-            >
-              Grouped
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`px-2 py-1 rounded text-xs font-medium transition ${
-                viewMode === 'list' ? 'bg-blue-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
-              }`}
-            >
-              Flat List
-            </button>
+            <span className="text-gray-400 font-mono text-[10px] font-semibold">VIEW:</span>
+            <div className="flex items-center bg-gray-100 p-0.5 rounded-lg border border-gray-200">
+              <button
+                onClick={() => setViewMode('grouped')}
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition ${
+                  viewMode === 'grouped'
+                    ? 'bg-gray-900 text-white shadow-xs'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Grouped
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition ${
+                  viewMode === 'list'
+                    ? 'bg-gray-900 text-white shadow-xs'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Flat List
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -195,12 +196,12 @@ export const UnifiedSearchPage: React.FC = () => {
       {/* Results Display */}
       {hasSearched ? (
         totalMatches === 0 ? (
-          <div className="text-center py-16 bg-[#0F172A] border border-slate-800 rounded-xl p-8 space-y-2">
-            <div className="w-10 h-10 mx-auto rounded-md bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400">
+          <div className="text-center py-16 bg-white border border-gray-200 rounded-xl p-8 space-y-2 shadow-xs">
+            <div className="w-10 h-10 mx-auto rounded-md bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-500">
               <Search className="w-5 h-5" />
             </div>
-            <h3 className="text-sm font-semibold text-slate-200">No matching evidence found</h3>
-            <p className="text-xs text-slate-400 max-w-md mx-auto">
+            <h3 className="text-sm font-semibold text-gray-900">No matching evidence found</h3>
+            <p className="text-xs text-gray-500 max-w-md mx-auto">
               No audio segments or document pages matched your search query "{query}".
               Try adjusting terms or switching to AI Semantic Search.
             </p>
@@ -210,18 +211,18 @@ export const UnifiedSearchPage: React.FC = () => {
             {groupedResults.map((group) => (
               <div
                 key={group.evidenceId}
-                className="bg-[#0F172A] border border-slate-800 rounded-xl p-4 space-y-3"
+                className="bg-white border border-gray-200 rounded-xl p-4 space-y-3 shadow-xs"
               >
-                <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
                   <div className="flex items-center gap-2">
                     {group.fileType === 'audio' ? (
-                      <Headphones className="w-4 h-4 text-blue-400" />
+                      <Headphones className="w-4 h-4 text-gray-700" />
                     ) : (
-                      <FileText className="w-4 h-4 text-indigo-400" />
+                      <FileText className="w-4 h-4 text-gray-700" />
                     )}
-                    <h3 className="text-xs font-semibold text-slate-100 font-mono">{group.fileName}</h3>
+                    <h3 className="text-xs font-semibold text-gray-900 font-mono">{group.fileName}</h3>
                   </div>
-                  <span className="text-[11px] px-2 py-0.5 rounded bg-slate-900 text-blue-400 font-mono border border-slate-800">
+                  <span className="text-[11px] px-2 py-0.5 rounded bg-gray-100 text-gray-700 font-mono border border-gray-200 font-medium">
                     {group.totalMatches} {group.totalMatches === 1 ? 'match' : 'matches'}
                   </span>
                 </div>
@@ -242,15 +243,15 @@ export const UnifiedSearchPage: React.FC = () => {
           </div>
         )
       ) : (
-        <div className="text-center py-16 bg-[#0F172A] border border-slate-800 rounded-xl p-8 space-y-3">
-          <div className="w-12 h-12 mx-auto rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-blue-400">
+        <div className="text-center py-16 bg-white border border-gray-200 rounded-xl p-8 space-y-3 shadow-xs">
+          <div className="w-12 h-12 mx-auto rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-700">
             <Search className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-slate-200">
+            <h3 className="text-sm font-semibold text-gray-900">
               Ready to Search Case Evidence
             </h3>
-            <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+            <p className="text-xs text-gray-500 mt-1 max-w-md mx-auto">
               Type names, dates, financial amounts, or speak into the microphone to locate exact words in audio transcripts and document exhibits.
             </p>
           </div>

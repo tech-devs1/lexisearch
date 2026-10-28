@@ -7,7 +7,6 @@ import {
   Headphones, 
   FileText, 
   ShieldCheck, 
-  ArrowRight,
   FolderOpen
 } from 'lucide-react';
 import { useCase } from '../context/CaseContext';
@@ -55,29 +54,29 @@ export const CasesPage: React.FC = () => {
   };
 
   const statusConfig: Record<EvidenceStatus, { label: string; dot: string; text: string }> = {
-    uploaded: { label: 'Uploaded', dot: 'bg-slate-400', text: 'text-slate-400' },
-    queued: { label: 'Queued', dot: 'bg-blue-400', text: 'text-blue-400' },
-    processing: { label: 'Processing', dot: 'bg-amber-400 animate-pulse', text: 'text-amber-400' },
-    indexing: { label: 'Indexing', dot: 'bg-purple-400', text: 'text-purple-400' },
-    completed: { label: 'Completed', dot: 'bg-emerald-400', text: 'text-emerald-400' },
-    completed_with_warnings: { label: 'Warnings', dot: 'bg-yellow-400', text: 'text-yellow-400' },
-    failed: { label: 'Failed', dot: 'bg-red-400', text: 'text-red-400' },
+    uploaded: { label: 'Uploaded', dot: 'bg-gray-400', text: 'text-gray-600' },
+    queued: { label: 'Queued', dot: 'bg-blue-500', text: 'text-blue-600' },
+    processing: { label: 'Processing', dot: 'bg-amber-500 animate-pulse', text: 'text-amber-600' },
+    indexing: { label: 'Indexing', dot: 'bg-purple-500', text: 'text-purple-600' },
+    completed: { label: 'Completed', dot: 'bg-emerald-500', text: 'text-emerald-600' },
+    completed_with_warnings: { label: 'Warnings', dot: 'bg-yellow-500', text: 'text-yellow-600' },
+    failed: { label: 'Failed', dot: 'bg-red-500', text: 'text-red-600' },
   };
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Page Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="w-7 h-7 rounded-md bg-blue-950/60 border border-blue-900/60 text-blue-400 flex items-center justify-center font-bold">
+            <span className="w-7 h-7 rounded-md bg-gray-100 border border-gray-200 text-gray-800 flex items-center justify-center font-bold">
               <Briefcase className="w-3.5 h-3.5" />
             </span>
-            <h1 className="text-lg lg:text-xl font-bold text-slate-100">
+            <h1 className="text-lg lg:text-xl font-bold text-gray-900">
               Case & Evidence Management
             </h1>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-gray-500 mt-1">
             Maintain judicial integrity, assign counsel, and manage audio/document evidence vaults.
           </p>
         </div>
@@ -86,7 +85,7 @@ export const CasesPage: React.FC = () => {
           {canUploadEvidence() && (
             <button
               onClick={() => setIsUploadOpen(true)}
-              className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs transition flex items-center gap-1.5 shadow-sm"
+              className="px-3.5 py-1.5 rounded-lg bg-gray-900 hover:bg-black text-white font-medium text-xs transition flex items-center gap-1.5 shadow-xs"
             >
               <Upload className="w-3.5 h-3.5" />
               <span>Upload Evidence</span>
@@ -96,9 +95,9 @@ export const CasesPage: React.FC = () => {
           {canEditCase() && (
             <button
               onClick={() => setIsNewCaseOpen(true)}
-              className="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-850 text-slate-200 font-medium text-xs border border-slate-800 hover:border-slate-700 transition flex items-center gap-1.5"
+              className="px-3.5 py-1.5 rounded-lg bg-white hover:bg-gray-50 text-gray-700 font-medium text-xs border border-gray-300 transition flex items-center gap-1.5 shadow-xs"
             >
-              <Plus className="w-3.5 h-3.5 text-blue-400" />
+              <Plus className="w-3.5 h-3.5 text-gray-600" />
               <span>New Legal Case</span>
             </button>
           )}
@@ -107,20 +106,20 @@ export const CasesPage: React.FC = () => {
 
       {/* Cases Selector Grid */}
       <div className="space-y-2">
-        <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+        <div className="text-[10px] font-mono uppercase tracking-wider text-gray-400 font-semibold">
           CASE DOSSIERS ({cases.length})
         </div>
 
         {cases.length === 0 ? (
-          <div className="p-8 text-center bg-[#0F172A] border border-slate-800 rounded-xl space-y-2">
-            <FolderOpen className="w-8 h-8 text-slate-400 mx-auto" />
-            <h3 className="text-xs font-semibold text-slate-200">No cases recorded</h3>
-            <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
+          <div className="p-8 text-center bg-white border border-gray-200 rounded-xl space-y-2 shadow-xs">
+            <FolderOpen className="w-8 h-8 text-gray-400 mx-auto" />
+            <h3 className="text-xs font-semibold text-gray-900">No cases recorded</h3>
+            <p className="text-[11px] text-gray-500 max-w-sm mx-auto">
               Create a new legal dossier to manage hearings, witnesses, and exhibits.
             </p>
             <button
               onClick={() => setIsNewCaseOpen(true)}
-              className="mt-1 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition"
+              className="mt-1 px-3 py-1.5 rounded-lg bg-gray-900 hover:bg-black text-white text-xs font-medium transition shadow-xs"
             >
               Create First Case
             </button>
@@ -135,30 +134,30 @@ export const CasesPage: React.FC = () => {
                   onClick={() => selectCase(c.id)}
                   className={`p-4 rounded-xl border cursor-pointer transition flex flex-col justify-between ${
                     isSelected
-                      ? 'bg-slate-900 border-blue-600/80 shadow-sm ring-1 ring-blue-600/30'
-                      : 'bg-[#0F172A] border-slate-800 hover:border-slate-700'
+                      ? 'bg-white border-gray-900 shadow-sm ring-1 ring-gray-900'
+                      : 'bg-white border-gray-200 hover:border-gray-400 shadow-xs'
                   }`}
                 >
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-mono font-medium text-blue-400 bg-blue-950/40 px-2 py-0.5 rounded border border-blue-900/40">
+                      <span className="text-xs font-mono font-medium text-gray-900 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">
                         {c.caseNumber}
                       </span>
-                      <span className="text-[10px] uppercase font-mono text-slate-400 px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700">
+                      <span className="text-[10px] uppercase font-mono text-gray-600 px-1.5 py-0.5 rounded bg-gray-100 border border-gray-200">
                         {c.status.replace('_', ' ')}
                       </span>
                     </div>
 
-                    <h3 className="text-sm font-semibold text-slate-100 line-clamp-1">{c.title}</h3>
-                    <p className="text-xs text-slate-400 mt-1 line-clamp-2">{c.description || 'No description provided.'}</p>
-                    <div className="text-[11px] text-slate-400 mt-2 font-mono">{c.court}</div>
+                    <h3 className="text-sm font-semibold text-gray-900 line-clamp-1">{c.title}</h3>
+                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">{c.description || 'No description provided.'}</p>
+                    <div className="text-[11px] text-gray-400 mt-2 font-mono">{c.court}</div>
                   </div>
 
-                  <div className="mt-3 pt-2.5 border-t border-slate-800 flex items-center justify-between text-xs">
-                    <span className="text-slate-400 font-mono text-[11px]">
+                  <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between text-xs">
+                    <span className="text-gray-400 font-mono text-[11px]">
                       {c.evidence?.length || 0} Evidence Files
                     </span>
-                    <span className={`text-[11px] font-medium ${isSelected ? 'text-blue-400' : 'text-slate-400'}`}>
+                    <span className={`text-[11px] font-medium ${isSelected ? 'text-gray-900' : 'text-gray-400'}`}>
                       {isSelected ? '● Active Matter' : 'Click to select'}
                     </span>
                   </div>
@@ -171,22 +170,22 @@ export const CasesPage: React.FC = () => {
 
       {/* Active Case Evidence Dossier Table */}
       {activeCase && (
-        <div className="bg-[#0F172A] border border-slate-800 rounded-xl p-5 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+        <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4 shadow-xs">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-3">
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-mono font-semibold text-blue-400 bg-blue-950/40 px-2 py-0.5 rounded border border-blue-900/40">
+                <span className="text-xs font-mono font-semibold text-gray-900 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">
                   {activeCase.caseNumber}
                 </span>
-                <span className="text-xs text-slate-400">•</span>
-                <span className="text-xs text-slate-400 font-mono">Presiding: {activeCase.presidingJudge || 'Hon. Justice'}</span>
+                <span className="text-xs text-gray-400">•</span>
+                <span className="text-xs text-gray-500 font-mono">Presiding: {activeCase.presidingJudge || 'Hon. Justice'}</span>
               </div>
-              <h2 className="text-base font-semibold text-slate-100 mt-1">{activeCase.title}</h2>
+              <h2 className="text-base font-semibold text-gray-900 mt-1">{activeCase.title}</h2>
             </div>
 
             <button
               onClick={() => setIsUploadOpen(true)}
-              className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs transition flex items-center gap-1.5 shadow-sm"
+              className="px-3.5 py-1.5 rounded-lg bg-gray-900 hover:bg-black text-white font-medium text-xs transition flex items-center gap-1.5 shadow-xs"
             >
               <Upload className="w-3.5 h-3.5" />
               <span>Add Evidence to Dossier</span>
@@ -195,51 +194,51 @@ export const CasesPage: React.FC = () => {
 
           {/* Evidence Table */}
           {(!activeCase.evidence || activeCase.evidence.length === 0) ? (
-            <div className="py-8 text-center text-xs text-slate-400 font-mono">
+            <div className="py-8 text-center text-xs text-gray-500 font-mono">
               No evidence files attached to this matter yet. Click "Add Evidence to Dossier" to upload.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-900/80 text-slate-400 uppercase tracking-wider text-[10px] border-b border-slate-800 font-mono">
+                <thead className="bg-gray-50 text-gray-500 uppercase tracking-wider text-[10px] border-b border-gray-200 font-mono">
                   <tr>
-                    <th className="py-2.5 px-3">Evidence File</th>
-                    <th className="py-2.5 px-3">Type</th>
-                    <th className="py-2.5 px-3">SHA-256 Digest</th>
-                    <th className="py-2.5 px-3">Status</th>
-                    <th className="py-2.5 px-3">Size</th>
-                    <th className="py-2.5 px-3 text-right">Actions</th>
+                    <th className="py-2.5 px-3 font-semibold">Evidence File</th>
+                    <th className="py-2.5 px-3 font-semibold">Type</th>
+                    <th className="py-2.5 px-3 font-semibold">SHA-256 Digest</th>
+                    <th className="py-2.5 px-3 font-semibold">Status</th>
+                    <th className="py-2.5 px-3 font-semibold">Size</th>
+                    <th className="py-2.5 px-3 text-right font-semibold">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-gray-100">
                   {activeCase.evidence.map((ev) => {
-                    const status = statusConfig[ev.status] || { label: ev.status, dot: 'bg-slate-400', text: 'text-slate-400' };
+                    const status = statusConfig[ev.status] || { label: ev.status, dot: 'bg-gray-400', text: 'text-gray-600' };
                     return (
-                      <tr key={ev.id} className="hover:bg-slate-800/30 transition">
+                      <tr key={ev.id} className="hover:bg-gray-50/70 transition">
                         <td className="py-3 px-3">
                           <div className="flex items-center gap-2">
                             {ev.fileType === 'audio' ? (
-                              <span className="w-6 h-6 rounded bg-blue-950/50 text-blue-400 flex items-center justify-center shrink-0 border border-blue-900/40">
+                              <span className="w-6 h-6 rounded bg-gray-100 text-gray-700 flex items-center justify-center shrink-0 border border-gray-200">
                                 <Headphones className="w-3.5 h-3.5" />
                               </span>
                             ) : (
-                              <span className="w-6 h-6 rounded bg-indigo-950/50 text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-900/40">
+                              <span className="w-6 h-6 rounded bg-gray-100 text-gray-700 flex items-center justify-center shrink-0 border border-gray-200">
                                 <FileText className="w-3.5 h-3.5" />
                               </span>
                             )}
                             <div>
-                              <div className="font-medium text-slate-200">{ev.fileName}</div>
-                              <div className="text-[10px] text-slate-400">{ev.statusMessage}</div>
+                              <div className="font-medium text-gray-900">{ev.fileName}</div>
+                              <div className="text-[10px] text-gray-500">{ev.statusMessage}</div>
                             </div>
                           </div>
                         </td>
 
-                        <td className="py-3 px-3 uppercase text-[10px] font-mono text-slate-400">
+                        <td className="py-3 px-3 uppercase text-[10px] font-mono text-gray-500">
                           {ev.fileType}
                         </td>
 
-                        <td className="py-3 px-3 font-mono text-[11px] text-slate-400">
-                          <span className="flex items-center gap-1.5 text-emerald-400" title={ev.sha256Hash}>
+                        <td className="py-3 px-3 font-mono text-[11px] text-gray-600">
+                          <span className="flex items-center gap-1.5 text-emerald-600" title={ev.sha256Hash}>
                             <ShieldCheck className="w-3 h-3" />
                             {formatHashTruncated(ev.sha256Hash, 8)}
                           </span>
@@ -252,7 +251,7 @@ export const CasesPage: React.FC = () => {
                           </span>
                         </td>
 
-                        <td className="py-3 px-3 font-mono text-slate-400 text-[11px]">
+                        <td className="py-3 px-3 font-mono text-gray-500 text-[11px]">
                           {(ev.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB
                         </td>
 
@@ -262,7 +261,7 @@ export const CasesPage: React.FC = () => {
                               if (ev.fileType === 'audio') navigate(`/audio?id=${ev.id}`);
                               else navigate(`/document?id=${ev.id}`);
                             }}
-                            className="px-2.5 py-1 rounded bg-slate-900 hover:bg-blue-600 hover:text-white text-slate-300 font-medium text-xs border border-slate-800 hover:border-blue-600 transition"
+                            className="px-2.5 py-1 rounded-md bg-white hover:bg-gray-900 hover:text-white text-gray-700 font-medium text-xs border border-gray-200 hover:border-gray-900 transition shadow-xs"
                           >
                             {ev.fileType === 'audio' ? 'Play' : 'Inspect'}
                           </button>
@@ -286,16 +285,16 @@ export const CasesPage: React.FC = () => {
 
       {/* Create Case Modal */}
       {isNewCaseOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-[#0F172A] border border-slate-800 rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
-                <Briefcase className="w-4 h-4 text-blue-400" />
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-gray-200 rounded-xl max-w-lg w-full p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                <Briefcase className="w-4 h-4 text-gray-800" />
                 <span>Create New Legal Matter</span>
               </h3>
               <button
                 onClick={() => setIsNewCaseOpen(false)}
-                className="text-slate-400 hover:text-slate-200 text-xs"
+                className="text-gray-400 hover:text-gray-700 text-xs"
               >
                 Cancel
               </button>
@@ -303,7 +302,7 @@ export const CasesPage: React.FC = () => {
 
             <form onSubmit={handleCreateCaseSubmit} className="space-y-3.5 text-xs">
               <div>
-                <label className="block text-slate-300 font-medium mb-1 font-mono text-[11px]">
+                <label className="block text-gray-700 font-medium mb-1 font-mono text-[11px]">
                   Case / Suit Number *
                 </label>
                 <input
@@ -312,12 +311,12 @@ export const CasesPage: React.FC = () => {
                   value={caseNumber}
                   onChange={(e) => setCaseNumber(e.target.value)}
                   placeholder="e.g. CR/ACC/0482/2026"
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-md text-slate-100 font-mono focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 font-mono focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-medium mb-1 font-mono text-[11px]">
+                <label className="block text-gray-700 font-medium mb-1 font-mono text-[11px]">
                   Case Title *
                 </label>
                 <input
@@ -326,12 +325,12 @@ export const CasesPage: React.FC = () => {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. The Republic v. Kwame Mensah & 2 Ors"
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-md text-slate-100 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-medium mb-1 font-mono text-[11px]">
+                <label className="block text-gray-700 font-medium mb-1 font-mono text-[11px]">
                   Court Division
                 </label>
                 <input
@@ -339,12 +338,12 @@ export const CasesPage: React.FC = () => {
                   value={court}
                   onChange={(e) => setCourt(e.target.value)}
                   placeholder="e.g. High Court (Commercial Division), Accra"
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-md text-slate-100 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-medium mb-1 font-mono text-[11px]">
+                <label className="block text-gray-700 font-medium mb-1 font-mono text-[11px]">
                   Presiding Judge
                 </label>
                 <input
@@ -352,12 +351,12 @@ export const CasesPage: React.FC = () => {
                   value={presidingJudge}
                   onChange={(e) => setPresidingJudge(e.target.value)}
                   placeholder="e.g. Hon. Justice Sophia Adinyira"
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-md text-slate-100 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-medium mb-1 font-mono text-[11px]">
+                <label className="block text-gray-700 font-medium mb-1 font-mono text-[11px]">
                   Brief Case Summary / Indictment
                 </label>
                 <textarea
@@ -365,21 +364,21 @@ export const CasesPage: React.FC = () => {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe charges, allegations, and key exhibits..."
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-md text-slate-100 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                 />
               </div>
 
-              <div className="pt-3 border-t border-slate-800 flex justify-end gap-2">
+              <div className="pt-3 border-t border-gray-100 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setIsNewCaseOpen(false)}
-                  className="px-3.5 py-1.5 rounded-md bg-slate-900 hover:bg-slate-850 text-slate-300 border border-slate-800 font-medium text-xs transition"
+                  className="px-3.5 py-1.5 rounded-lg bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 font-medium text-xs transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs transition"
+                  className="px-4 py-1.5 rounded-lg bg-gray-900 hover:bg-black text-white font-medium text-xs transition shadow-xs"
                 >
                   Create Dossier
                 </button>

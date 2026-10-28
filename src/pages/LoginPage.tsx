@@ -43,26 +43,26 @@ export const LoginPage: React.FC = () => {
       await sendPasswordReset(recoveryEmail.trim());
       setRecoverySent(true);
     } catch {
-      setRecoverySent(true); // Show success even in demo mode
+      setRecoverySent(true);
     } finally {
       setIsRecovering(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-4">
-      <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl space-y-6">
+    <div className="min-h-screen bg-[#F8F8F8] flex flex-col justify-center items-center p-4">
+      <div className="max-w-md w-full bg-white border border-gray-200 rounded-2xl p-8 shadow-lg space-y-6">
         {/* Emblem & Header */}
         <div className="text-center space-y-3">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-slate-950 shadow-xl shadow-amber-500/20">
-            <Scale className="w-9 h-9" />
+          <div className="w-14 h-14 mx-auto rounded-xl bg-gray-900 flex items-center justify-center text-white shadow-sm">
+            <Scale className="w-7 h-7" />
           </div>
           <div>
-            <h1 className="text-xl font-black text-slate-100 tracking-wider">
+            <h1 className="text-lg font-semibold text-gray-900 tracking-wide">
               GHANA LEGAL EVIDENCE INTELLIGENCE SYSTEM
             </h1>
-            <p className="text-xs text-amber-400 font-semibold uppercase tracking-widest mt-1">
-              GLEIS • Judicial Service of Ghana
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-widest mt-1">
+              GLEIS · Judicial Service of Ghana
             </p>
           </div>
         </div>
@@ -70,51 +70,51 @@ export const LoginPage: React.FC = () => {
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           <div>
-            <label className="block text-slate-300 font-semibold mb-1.5">Official Court Email</label>
+            <label className="block text-gray-700 font-medium mb-1.5">Official Court Email</label>
             <div className="relative">
-              <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="officer@judicial.gov.gh"
-                className="w-full pl-9 pr-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-400 focus:outline-none focus:border-amber-500"
+                className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
               />
             </div>
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-slate-300 font-semibold">Access Password</label>
+              <label className="text-gray-700 font-medium">Access Password</label>
               <button
                 type="button"
                 onClick={() => {
                   setShowRecovery(true);
                   setRecoveryEmail(email);
                 }}
-                className="text-[11px] text-amber-400 hover:underline"
+                className="text-[11px] text-gray-500 hover:text-gray-900 transition"
               >
                 Forgot password?
               </button>
             </div>
             <div className="relative">
-              <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
-                className="w-full pl-9 pr-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-400 focus:outline-none focus:border-amber-500"
+                className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
               />
             </div>
-            <p className="text-[10px] text-slate-500 mt-1">
+            <p className="text-[10px] text-gray-400 mt-1">
               Leave password blank to use demo mode (mock session).
             </p>
           </div>
 
           {error && (
-            <div className="p-3 rounded-lg bg-red-500/15 border border-red-500/30 text-red-300 text-xs">
+            <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs">
               {error}
             </div>
           )}
@@ -122,7 +122,7 @@ export const LoginPage: React.FC = () => {
           <button
             type="submit"
             disabled={isAuthLoading}
-            className="w-full py-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-slate-950 font-bold rounded-xl text-xs shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2"
+            className="w-full py-3 bg-gray-900 hover:bg-black disabled:opacity-60 text-white font-medium rounded-lg text-xs shadow-sm transition flex items-center justify-center gap-2"
           >
             {isAuthLoading ? (
               <>
@@ -139,38 +139,38 @@ export const LoginPage: React.FC = () => {
         </form>
 
         {/* Quick Role Selectors for Evaluation */}
-        <div className="pt-4 border-t border-slate-800 space-y-2">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 text-center">
+        <div className="pt-4 border-t border-gray-200 space-y-2">
+          <div className="text-[10px] font-medium uppercase tracking-wider text-gray-400 text-center">
             One-Click Role Demonstration Login
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <button
               onClick={() => handleQuickLogin('super_admin')}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-purple-300 font-medium text-left transition"
+              className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
             >
-              <div className="font-bold text-[11px]">Super Admin</div>
-              <div className="text-[9px] text-slate-400 truncate">Justice Sophia Adinyira</div>
+              <div className="font-medium text-[11px] text-gray-900">Super Admin</div>
+              <div className="text-[9px] text-gray-500 truncate">Justice Sophia Adinyira</div>
             </button>
             <button
               onClick={() => handleQuickLogin('lawyer')}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-amber-300 font-medium text-left transition"
+              className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
             >
-              <div className="font-bold text-[11px]">Lead Counsel / Lawyer</div>
-              <div className="text-[9px] text-slate-400 truncate">Abena Osei-Mensah</div>
+              <div className="font-medium text-[11px] text-gray-900">Lead Counsel / Lawyer</div>
+              <div className="text-[9px] text-gray-500 truncate">Abena Osei-Mensah</div>
             </button>
             <button
               onClick={() => handleQuickLogin('org_admin')}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-blue-300 font-medium text-left transition"
+              className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
             >
-              <div className="font-bold text-[11px]">Court Registrar</div>
-              <div className="text-[9px] text-slate-400 truncate">Benjamin Kwakye</div>
+              <div className="font-medium text-[11px] text-gray-900">Court Registrar</div>
+              <div className="text-[9px] text-gray-500 truncate">Benjamin Kwakye</div>
             </button>
             <button
               onClick={() => handleQuickLogin('reviewer')}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-emerald-300 font-medium text-left transition"
+              className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
             >
-              <div className="font-bold text-[11px]">CID Investigator</div>
-              <div className="text-[9px] text-slate-400 truncate">D/C/Insp Eric Addo</div>
+              <div className="font-medium text-[11px] text-gray-900">CID Investigator</div>
+              <div className="text-[9px] text-gray-500 truncate">D/C/Insp Eric Addo</div>
             </button>
           </div>
         </div>
@@ -178,10 +178,10 @@ export const LoginPage: React.FC = () => {
 
       {/* Password Recovery Modal */}
       {showRecovery && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4 text-xs">
-            <h3 className="text-sm font-bold text-slate-100">Judicial Account Recovery</h3>
-            <p className="text-slate-400">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-gray-200 rounded-2xl max-w-sm w-full p-6 shadow-xl space-y-4 text-xs">
+            <h3 className="text-sm font-semibold text-gray-900">Judicial Account Recovery</h3>
+            <p className="text-gray-500">
               Enter your official government email to receive password reset credentials from the Judicial Service IT Bureau.
             </p>
             <input
@@ -189,10 +189,10 @@ export const LoginPage: React.FC = () => {
               value={recoveryEmail}
               onChange={(e) => setRecoveryEmail(e.target.value)}
               placeholder="officer@judicial.gov.gh"
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-amber-500"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
             />
             {recoverySent && (
-              <div className="p-2 bg-emerald-500/20 text-emerald-300 rounded text-center flex items-center justify-center gap-2">
+              <div className="p-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-center flex items-center justify-center gap-2">
                 <CheckCircle2 className="w-4 h-4" />
                 Recovery link dispatched to your official email.
               </div>
@@ -203,7 +203,7 @@ export const LoginPage: React.FC = () => {
                   setShowRecovery(false);
                   setRecoverySent(false);
                 }}
-                className="px-3 py-1.5 bg-slate-800 text-slate-300 rounded"
+                className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
               >
                 Close
               </button>
@@ -211,7 +211,7 @@ export const LoginPage: React.FC = () => {
                 <button
                   onClick={handlePasswordRecovery}
                   disabled={isRecovering || !recoveryEmail.trim()}
-                  className="px-3 py-1.5 bg-amber-500 text-slate-950 font-bold rounded flex items-center gap-1.5 disabled:opacity-60"
+                  className="px-3 py-1.5 bg-gray-900 text-white font-medium rounded-lg flex items-center gap-1.5 disabled:opacity-60"
                 >
                   {isRecovering ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                   Send Link
