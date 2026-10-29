@@ -73,7 +73,9 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // 1. Initialize Users list from storage or seed with personas
+  const legacyMockUids = ['user_prosecutor', 'user_lawyer', 'user_investigator', 'user_viewer', 'user_org_admin'];
+
+  // 1. Initialize Users list from storage or seed with personas (clean state, zero mock users)
   const [users, setUsers] = useState<UserProfile[]>(() => {
     if (typeof localStorage !== 'undefined') {
       const saved = localStorage.getItem(USERS_STORAGE_KEY);
@@ -81,8 +83,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            // Ensure supertech@admin.com is always present as super_admin
-            const hasSuperTech = parsed.some((u: UserProfile) => u.email.toLowerCase() === 'supertech@admin.com');
+            // Filter out all legacy mock users
+            const cleaned = parsed.filter((u: UserProfile) => !legacyMockUids.includes(u.uid));
+            const hasSuperTech = cleaned.some((u: UserProfile) => u.email.toLowerCase() === 'supertech@admin.com');
             if (!hasSuperTech) {
               const superTechUser: UserProfile = {
                 uid: 'user_super_admin',
@@ -97,9 +100,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 lastLoginAt: '2026-10-24T12:00:00Z',
                 isActive: true,
               };
-              return [superTechUser, ...parsed.filter((u: UserProfile) => u.uid !== 'user_super_admin' && u.email !== 'justice.adinyira@judicial.gov.gh')];
+              return [superTechUser, ...cleaned.filter((u: UserProfile) => u.uid !== 'user_super_admin' && u.email !== 'justice.adinyira@judicial.gov.gh')];
             }
-            return parsed;
+            return cleaned;
           }
         } catch { /* ignore */ }
       }
@@ -107,21 +110,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return MOCK_USERS;
   });
 
-  // 2. Initialize Current User (Default to Lead Counsel for smooth evaluation)
+  // 2. Initialize Current User (Strict: null by default unless authenticated)
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     if (typeof localStorage !== 'undefined') {
       const saved = localStorage.getItem(ACTIVE_USER_STORAGE_KEY);
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          if (parsed && parsed.isActive !== false) {
+          if (parsed && parsed.isActive !== false && !legacyMockUids.includes(parsed.uid)) {
             return parsed;
           }
         } catch { /* ignore */ }
       }
     }
-    // Default to Mrs. Abena Osei-Mensah (Lawyer)
-    return MOCK_USERS.find((u) => u.role === 'lawyer') || MOCK_USERS[0];
+    return null;
   });
 
   const [isAuthLoading, setIsAuthLoading] = useState(false);

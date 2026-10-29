@@ -21,7 +21,7 @@ interface WorkspaceContextType {
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
 
-// Initial institutional workspaces
+// Initial institutional apex registry workspace (clean state, zero mock workspaces/users)
 const DEFAULT_WORKSPACES: Workspace[] = [
   {
     id: 'ws_crt_supreme_01',
@@ -40,96 +40,16 @@ const DEFAULT_WORKSPACES: Workspace[] = [
         joinedAt: '2026-01-01T00:00:00Z',
         status: 'active',
       },
-      {
-        userId: 'user_org_admin',
-        email: 'b.kwakye@judicial.gov.gh',
-        displayName: 'Benjamin Kwakye (Court Registrar)',
-        role: 'registrar',
-        joinedAt: '2026-01-01T00:00:00Z',
-        status: 'active',
-      },
-      {
-        userId: 'user_prosecutor',
-        email: 'prosecutor.alfred@ag.gov.gh',
-        displayName: 'Hon. Alfred Tuah-Yeboah (State Prosecutor)',
-        role: 'counsel',
-        joinedAt: '2026-02-01T00:00:00Z',
-        status: 'active',
-      },
-      {
-        userId: 'user_lawyer',
-        email: 'abena.osei@lawchambers.gh',
-        displayName: 'Mrs. Abena Osei-Mensah (Senior Counsel)',
-        role: 'counsel',
-        joinedAt: '2026-02-15T00:00:00Z',
-        status: 'active',
-      },
-      {
-        userId: 'user_investigator',
-        email: 'investigator.eric@cid.police.gov.gh',
-        displayName: 'D/C/Insp. Eric Addo (Lead Financial Investigator)',
-        role: 'investigator',
-        joinedAt: '2026-03-01T00:00:00Z',
-        status: 'active',
-      },
-      {
-        userId: 'user_viewer',
-        email: 'kofi.mensah@judicial.gov.gh',
-        displayName: 'Kofi Mensah (Supreme Court Legal Researcher)',
-        role: 'viewer',
-        joinedAt: '2026-03-10T00:00:00Z',
-        status: 'active',
-      },
     ],
     createdAt: '2026-01-01T08:00:00Z',
     updatedAt: '2026-01-01T08:00:00Z',
-  },
-  {
-    id: 'ws_org_law_firm_01',
-    name: 'Osei-Mensah & Associates (Commercial Chambers)',
-    type: 'organization',
-    ownerId: 'user_lawyer',
-    description: 'Defense litigation chambers, corporate advisory, and trial preparation.',
-    code: 'FIRM-OMA-ACC',
-    jurisdiction: 'Accra Bar Jurisdiction',
-    members: [
-      {
-        userId: 'user_lawyer',
-        email: 'abena.osei@lawchambers.gh',
-        displayName: 'Mrs. Abena Osei-Mensah (Senior Counsel)',
-        role: 'owner',
-        joinedAt: '2026-02-15T00:00:00Z',
-        status: 'active',
-      },
-    ],
-    createdAt: '2026-02-15T11:00:00Z',
-    updatedAt: '2026-02-15T11:00:00Z',
-  },
-  {
-    id: 'ws_org_cid_01',
-    name: 'CID Financial & Economic Crimes Bureau',
-    type: 'organization',
-    ownerId: 'user_investigator',
-    description: 'Police investigations, forensic asset tracing, and criminal exhibit management.',
-    code: 'AGCY-CID-HQ',
-    jurisdiction: 'Ghana Police Service CID HQ',
-    members: [
-      {
-        userId: 'user_investigator',
-        email: 'investigator.eric@cid.police.gov.gh',
-        displayName: 'D/C/Insp. Eric Addo (Lead Financial Investigator)',
-        role: 'owner',
-        joinedAt: '2026-03-01T00:00:00Z',
-        status: 'active',
-      },
-    ],
-    createdAt: '2026-03-01T14:00:00Z',
-    updatedAt: '2026-03-01T14:00:00Z',
   },
 ];
 
 export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser } = useAuth();
+  const legacyMockWsIds = ['ws_org_law_firm_01', 'ws_org_cid_01'];
+  const legacyMockUserIds = ['user_prosecutor', 'user_lawyer', 'user_investigator', 'user_viewer', 'user_org_admin'];
 
   // Load all workspaces from local storage or seed
   const [workspaces, setWorkspaces] = useState<Workspace[]>(() => {
@@ -138,7 +58,16 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            // Clean out legacy mock workspaces and members
+            const cleaned = parsed
+              .filter((w: Workspace) => !legacyMockWsIds.includes(w.id))
+              .map((w: Workspace) => ({
+                ...w,
+                members: (w.members || []).filter((m: WorkspaceMember) => !legacyMockUserIds.includes(m.userId)),
+              }));
+            if (cleaned.length > 0) return cleaned;
+          }
         } catch { /* ignore */ }
       }
     }

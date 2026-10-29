@@ -401,23 +401,23 @@ export const SettingsPage: React.FC = () => {
               <div>
                 <div className="font-medium text-red-900 flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-red-600" />
-                  Clear All Mock & Demo Data
+                  Clear All Case & Evidence Data
                 </div>
                 <div className="text-red-700/80 mt-0.5">
-                  Purges all simulated cases, mock evidence files, demo transcripts, and bookmarks, resetting GLEIS to a pristine empty state.
+                  Purges all cases, evidence files, transcripts, and bookmarks, resetting GLEIS to a pristine empty state.
                 </div>
               </div>
               <button
                 onClick={() => {
-                  if (window.confirm('Are you sure you want to clear all mock/demo cases and evidence? This operation resets GLEIS to a clean slate.')) {
+                  if (window.confirm('Are you sure you want to clear all cases and evidence? This operation resets GLEIS to a clean slate.')) {
                     clearAllMockData();
-                    alert('All mock data has been purged from the system.');
+                    alert('All data has been purged from the system.');
                   }
                 }}
                 className="px-3.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium text-xs transition flex items-center gap-1.5 shadow-xs shrink-0"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                Purge Mock Data
+                Purge Data
               </button>
             </div>
 

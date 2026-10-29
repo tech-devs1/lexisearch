@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types/auth';
-import { MOCK_USERS } from '../data/mockEvidence';
 
 type AuthTab = 'signin' | 'register';
 type OnboardingType = 'individual' | 'organization' | 'court';
@@ -47,7 +46,6 @@ export const LoginPage: React.FC = () => {
   const [authError, setAuthError] = useState('');
   const [authSuccess, setAuthSuccess] = useState('');
   const [isRecovering, setIsRecovering] = useState(false);
-  const [showDemoLogins, setShowDemoLogins] = useState(false);
 
   // Registration State
   const [regType, setRegType] = useState<OnboardingType>('individual');
@@ -132,18 +130,6 @@ export const LoginPage: React.FC = () => {
       }, 1400);
     } else {
       setAuthError(res.error || 'Failed to create officer account.');
-    }
-  };
-
-  const handleQuickLogin = async (role: UserRole) => {
-    const user = MOCK_USERS.find((u) => u.role === role);
-    if (user) {
-      const res = await login(user.email, role === 'super_admin' ? 'udiosuper' : undefined, role);
-      if (res.success) {
-        navigate('/dashboard');
-      } else {
-        setAuthError(res.error || 'Login failed for this role.');
-      }
     }
   };
 
@@ -665,78 +651,6 @@ export const LoginPage: React.FC = () => {
           </form>
         </div>
       )}
-
-        {/* Collapsible One-Click Demo Role Login (Evaluation Aid) */}
-        <div className="pt-2 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={() => setShowDemoLogins(!showDemoLogins)}
-            className="w-full py-1.5 flex items-center justify-between text-gray-500 hover:text-gray-900 text-xs transition"
-          >
-            <span className="font-mono text-[11px] uppercase tracking-wider">
-              Evaluator Demo Credentials & Instant Logins
-            </span>
-            {showDemoLogins ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-          </button>
-
-          {showDemoLogins && (
-            <div className="mt-3 pt-3 border-t border-dashed border-gray-200 space-y-2">
-              <p className="text-[11px] text-gray-500">
-                Select any authorized legal persona to test role-based access control and case permission segregation:
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('super_admin')}
-                  className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
-                >
-                  <div className="font-medium text-[11px] text-gray-900">Super Admin</div>
-                  <div className="text-[9px] text-gray-500 truncate">supertech@admin.com</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('prosecutor')}
-                  className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
-                >
-                  <div className="font-medium text-[11px] text-gray-900">Prosecutor</div>
-                  <div className="text-[9px] text-gray-500 truncate">Hon. A. Tuah-Yeboah</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('lawyer')}
-                  className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
-                >
-                  <div className="font-medium text-[11px] text-gray-900">Defense Counsel</div>
-                  <div className="text-[9px] text-gray-500 truncate">Mrs. A. Osei-Mensah</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('investigator')}
-                  className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
-                >
-                  <div className="font-medium text-[11px] text-gray-900">Investigator</div>
-                  <div className="text-[9px] text-gray-500 truncate">D/C/Insp. Eric Addo</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('viewer')}
-                  className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
-                >
-                  <div className="font-medium text-[11px] text-gray-900">Legal Researcher</div>
-                  <div className="text-[9px] text-gray-500 truncate">Kofi Mensah</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('org_admin')}
-                  className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
-                >
-                  <div className="font-medium text-[11px] text-gray-900">Court Registrar</div>
-                  <div className="text-[9px] text-gray-500 truncate">Benjamin Kwakye</div>
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
 
         {/* Back to Public Landing */}
         <div className="text-center pt-2">
