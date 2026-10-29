@@ -13,6 +13,12 @@ import {
   updateProfile,
 } from 'firebase/auth';
 import {
+  saveUserProfile,
+  getUserProfile,
+  loadAllUserProfiles,
+  updateUserProfile as updateProfileFirestore,
+} from '../services/firestoreService';
+import {
   isUserActive,
   canCreateCase,
   canEditCase,
@@ -342,13 +348,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     // Role assignment based on registration type
-    let role: UserRole = data.role || 'viewer';
+    // Security Protocol: Public self-registration must NEVER grant Court Registrar (org_admin) automatically!
+    let role: UserRole = 'viewer';
+    let accountStatus: 'active' | 'pending_verification' = 'active';
+
     if (data.accountType === 'court') {
-      role = 'org_admin'; // Court registrar / administrator
+      // Must be verified by Super Admin before gaining registrar authority
+      role = 'viewer';
+      accountStatus = 'pending_verification';
     } else if (data.accountType === 'organization') {
       role = 'lawyer';
-    } else if (data.barNumber) {
+      accountStatus = 'active';
+    } else if (data.barNumber && data.barNumber.trim().length >= 3) {
       role = 'lawyer';
+      accountStatus = 'active';
+    } else {
+      role = data.role || 'viewer';
+      accountStatus = 'active';
     }
 
     const newProfile: UserProfile = {
@@ -357,6 +373,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       displayName: data.displayName.trim(),
       role,
       accountType: data.accountType || 'individual',
+      accountStatus,
       organizationId: data.accountType === 'organization' ? `org_${Date.now()}` : 'org_judicial_service',
       organizationName:
         data.organizationName?.trim() ||
@@ -365,13 +382,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       division:
         data.division?.trim() ||
         (data.accountType === 'court'
-          ? 'Court Administration & Registry'
+          ? 'Court Administration & Registry (Pending Verification)'
           : 'Commercial & Criminal Litigation'),
       createdAt: new Date().toISOString(),
       lastLoginAt: new Date().toISOString(),
       emailVerified,
       isActive: true,
     };
+
+    // Persist profile to Firestore
+    await saveUserProfile(newProfile);
 
     setUsers((prev) => [...prev, newProfile]);
     setCurrentUser(newProfile);
@@ -420,11 +440,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!targetUser) return false;
 
     const oldRole = targetUser.role;
-    setUsers((prev) => prev.map((u) => (u.uid === userId ? { ...u, role: newRole } : u)));
+    setUsers((prev) => prev.map((u) => (u.uid === userId ? { ...u, role: newRole, accountStatus: 'active' } : u)));
 
     if (currentUser?.uid === userId) {
-      setCurrentUser((prev) => (prev ? { ...prev, role: newRole } : null));
+      setCurrentUser((prev) => (prev ? { ...prev, role: newRole, accountStatus: 'active' } : null));
     }
+
+    await updateProfileFirestore(userId, { role: newRole, accountStatus: 'active' });
 
     await globalAuditService.logAction({
       caseId: 'system',
@@ -455,6 +477,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!targetUser) return false;
 
     setUsers((prev) => prev.map((u) => (u.uid === userId ? { ...u, isActive: active } : u)));
+
+    await updateProfileFirestore(userId, { isActive: active });
 
     await globalAuditService.logAction({
       caseId: 'system',
@@ -490,6 +514,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     setUsers((prev) => [...prev, newUser]);
+    await saveUserProfile(newUser);
 
     await globalAuditService.logAction({
       caseId: 'system',

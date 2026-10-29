@@ -6,24 +6,34 @@ import { EvidenceFile } from '../types/evidence';
  * Checks if a user has active status and valid profile.
  */
 export function isUserActive(user: UserProfile | null): boolean {
-  return !!user && user.isActive === true;
+  if (!user || user.isActive !== true) return false;
+  if (user.accountStatus === 'suspended') return false;
+  return true;
+}
+
+/**
+ * Checks if a user has fully verified status (not pending administrative approval).
+ */
+export function isUserVerified(user: UserProfile | null): boolean {
+  if (!isUserActive(user)) return false;
+  return user?.accountStatus !== 'pending_verification';
 }
 
 /**
  * Checks if user has permission to view all cases globally (Super Admin / Court Admin).
  */
 export function canViewAllCases(user: UserProfile | null): boolean {
-  if (!isUserActive(user)) return false;
+  if (!isUserVerified(user)) return false;
   return ['super_admin', 'org_admin'].includes(user!.role);
 }
 
 /**
  * Checks if user has permission to create a new case docket.
  * Permitted: Super Admin, Prosecutor, Lawyer.
- * Denied: Investigator (works on assigned investigation files), Viewer.
+ * Denied: Investigator (works on assigned investigation files), Viewer, Unverified Court Accounts.
  */
 export function canCreateCase(user: UserProfile | null): boolean {
-  if (!isUserActive(user)) return false;
+  if (!isUserVerified(user)) return false;
   return ['super_admin', 'org_admin', 'prosecutor', 'lawyer'].includes(user!.role);
 }
 
@@ -62,10 +72,10 @@ export function canDeleteEvidence(user: UserProfile | null): boolean {
 
 /**
  * Checks if user can manage user accounts, assign roles, and activate/deactivate accounts.
- * Permitted: Super Admin and Org Admin.
+ * Permitted: Verified Super Admin and Verified Org Admin.
  */
 export function canManageUsers(user: UserProfile | null): boolean {
-  if (!isUserActive(user)) return false;
+  if (!isUserVerified(user)) return false;
   return ['super_admin', 'org_admin'].includes(user!.role);
 }
 
@@ -74,7 +84,7 @@ export function canManageUsers(user: UserProfile | null): boolean {
  * Permitted: Super Admin only.
  */
 export function canManageSettings(user: UserProfile | null): boolean {
-  if (!isUserActive(user)) return false;
+  if (!isUserVerified(user)) return false;
   return user!.role === 'super_admin';
 }
 
@@ -84,16 +94,16 @@ export function canManageSettings(user: UserProfile | null): boolean {
  * Denied: Investigator, Viewer.
  */
 export function canExportAuditLogs(user: UserProfile | null): boolean {
-  if (!isUserActive(user)) return false;
+  if (!isUserVerified(user)) return false;
   return ['super_admin', 'org_admin', 'prosecutor', 'lawyer'].includes(user!.role);
 }
 
 /**
  * Checks if user can assign or remove officers from a case.
- * Permitted: Super Admin, or case owner / lead counsel.
+ * Permitted: Super Admin, or case owner / lead counsel, or verified court registrar.
  */
 export function canAssignCaseMembers(user: UserProfile | null, legalCase?: LegalCase | null): boolean {
-  if (!isUserActive(user)) return false;
+  if (!isUserVerified(user)) return false;
   if (['super_admin', 'org_admin'].includes(user!.role)) return true;
   if (!legalCase) return false;
 

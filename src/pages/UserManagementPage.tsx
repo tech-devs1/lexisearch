@@ -127,9 +127,16 @@ export const UserManagementPage: React.FC = () => {
 
   // Find cases for a specific user
   const getUserAssignedCases = (userId: string) => {
+    const target = users.find((u) => u.uid === userId);
     return allCases.filter((c) => {
-      if (c.createdBy === userId) return true;
-      return (c.members || []).some((m) => m.userId === userId);
+      const createdByUid = typeof c.createdBy === 'string' ? c.createdBy : (c.createdBy as any)?.uid;
+      if (createdByUid === userId) return true;
+      return (c.members || []).some(
+        (m: any) =>
+          m.uid === userId ||
+          m.userId === userId ||
+          (target && m.email && m.email.toLowerCase() === target.email.toLowerCase())
+      );
     });
   };
 
@@ -270,6 +277,11 @@ export const UserManagementPage: React.FC = () => {
                               {isCurrentAuthUser && (
                                 <span className="text-[9px] px-1.5 py-0.2 rounded bg-gray-200 text-gray-700 font-mono">
                                   You
+                                </span>
+                              )}
+                              {u.accountStatus === 'pending_verification' && (
+                                <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200 font-mono">
+                                  Pending Verification
                                 </span>
                               )}
                             </div>

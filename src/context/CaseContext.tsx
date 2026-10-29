@@ -11,6 +11,8 @@ import { globalAuditService } from '../services/auditService';
 import { uploadEvidenceToR2 } from '../services/cloudflareR2Service';
 import { 
   saveCase, 
+  saveCaseMember,
+  deleteCaseMember,
   saveEvidenceRecord, 
   saveBookmark as saveBookmarkFirestore,
   deleteBookmarkFromFirestore 
@@ -251,9 +253,13 @@ export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
       newMember,
     ];
 
+    const updatedCase = { ...targetCase, members: updatedMembers, updatedAt: new Date().toISOString() };
     setAllCases((prev) =>
-      prev.map((c) => (c.id === caseId ? { ...c, members: updatedMembers, updatedAt: new Date().toISOString() } : c))
+      prev.map((c) => (c.id === caseId ? updatedCase : c))
     );
+
+    await saveCaseMember(caseId, newMember);
+    await saveCase(updatedCase);
 
     await globalAuditService.logAction({
       caseId,
@@ -278,9 +284,13 @@ export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const memberToRemove = targetCase.members.find((m) => m.uid === memberUserId);
     const updatedMembers = targetCase.members.filter((m) => m.uid !== memberUserId);
 
+    const updatedCase = { ...targetCase, members: updatedMembers, updatedAt: new Date().toISOString() };
     setAllCases((prev) =>
-      prev.map((c) => (c.id === caseId ? { ...c, members: updatedMembers, updatedAt: new Date().toISOString() } : c))
+      prev.map((c) => (c.id === caseId ? updatedCase : c))
     );
+
+    await deleteCaseMember(caseId, memberUserId);
+    await saveCase(updatedCase);
 
     await globalAuditService.logAction({
       caseId,

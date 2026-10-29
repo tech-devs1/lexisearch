@@ -83,11 +83,12 @@ export const LoginPage: React.FC = () => {
 
     let defaultRole: UserRole = 'viewer';
     if (regType === 'individual') {
-      defaultRole = barNumber.trim() ? 'lawyer' : 'viewer';
+      defaultRole = barNumber.trim().length >= 3 ? 'lawyer' : 'viewer';
     } else if (regType === 'organization') {
       defaultRole = 'lawyer';
     } else if (regType === 'court') {
-      defaultRole = 'org_admin';
+      // Security Protocol: Court Registrar authority requires verification by Super Admin
+      defaultRole = 'viewer';
     }
 
     const res = await register({
@@ -102,10 +103,16 @@ export const LoginPage: React.FC = () => {
     });
 
     if (res.success) {
-      setAuthSuccess('Account registered successfully. Redirecting to your workspace...');
+      if (regType === 'court') {
+        setAuthSuccess(
+          'Court Registry registration created. Account provisioned in review mode. Full registrar administration is pending verification by Super Admin.'
+        );
+      } else {
+        setAuthSuccess('Account registered successfully. Redirecting to your legal workspace...');
+      }
       setTimeout(() => {
         navigate('/dashboard');
-      }, 1200);
+      }, 1400);
     } else {
       setAuthError(res.error || 'Failed to create officer account.');
     }

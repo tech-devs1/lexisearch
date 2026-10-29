@@ -23,9 +23,13 @@ export const AudioPlayerPage: React.FC = () => {
         <div className="w-14 h-14 mx-auto rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-700 shadow-xs">
           <Headphones className="w-7 h-7" />
         </div>
-        <h2 className="text-lg font-semibold text-gray-900">No Audio Evidence Selected</h2>
+        <h2 className="text-lg font-semibold text-gray-900">
+          {evidenceId ? 'Evidentiary Access Restricted' : 'No Audio Evidence Selected'}
+        </h2>
         <p className="text-sm text-gray-500 max-w-md mx-auto">
-          Please select an audio recording from the Case Management page or upload an audio file (MP3, WAV, M4A) to begin interactive synchronized playback.
+          {evidenceId
+            ? 'You do not hold judicial authorization to inspect this courtroom recording, or access to this matter was revoked by the Court Registrar.'
+            : 'Please select an authorized audio recording from Case Management or upload an audio exhibit to begin interactive playback.'}
         </p>
       </div>
     );

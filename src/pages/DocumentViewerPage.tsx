@@ -23,9 +23,13 @@ export const DocumentViewerPage: React.FC = () => {
         <div className="w-14 h-14 mx-auto rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-700 shadow-xs">
           <FileText className="w-7 h-7" />
         </div>
-        <h2 className="text-lg font-semibold text-gray-900">No Document Evidence Selected</h2>
+        <h2 className="text-lg font-semibold text-gray-900">
+          {evidenceId ? 'Documentary Exhibit Restricted' : 'No Document Evidence Selected'}
+        </h2>
         <p className="text-sm text-gray-500 max-w-md mx-auto">
-          Please select a document exhibit from Case Management or upload a PDF, DOCX, or scanned exhibit.
+          {evidenceId
+            ? 'Access to this legal exhibit is restricted to authorized case counsel. Judicial authorization was revoked or not assigned.'
+            : 'Please select an authorized document exhibit from Case Management or upload an exhibit (PDF, DOCX) to inspect.'}
         </p>
       </div>
     );

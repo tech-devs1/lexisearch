@@ -22,10 +22,83 @@ import {
   Unsubscribe,
 } from 'firebase/firestore';
 import { db, isLocalMode } from './firebase';
-import { LegalCase } from '../types/case';
+import { LegalCase, CaseMember } from '../types/case';
 import { EvidenceFile } from '../types/evidence';
 import { Bookmark } from '../types/bookmark';
 import { AuditLogEntry } from '../types/audit';
+import { UserProfile } from '../types/auth';
+
+// ─── USER PROFILES ──────────────────────────────────────────────────────────
+
+/**
+ * Save user profile in Firestore under /users/{uid}.
+ * Does not store plaintext passwords.
+ */
+export async function saveUserProfile(profile: UserProfile): Promise<boolean> {
+  if (!db || isLocalMode) return false;
+  try {
+    const docRef = doc(db, 'users', profile.uid);
+    await setDoc(docRef, {
+      ...profile,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+    return true;
+  } catch (err) {
+    console.warn('Firestore saveUserProfile error:', err);
+    return false;
+  }
+}
+
+/**
+ * Fetch user profile from Firestore by UID.
+ */
+export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+  if (!db || isLocalMode) return null;
+  try {
+    const docRef = doc(db, 'users', uid);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      return snap.data() as UserProfile;
+    }
+    return null;
+  } catch (err) {
+    console.warn('Firestore getUserProfile error:', err);
+    return null;
+  }
+}
+
+/**
+ * Load all user profiles from Firestore.
+ */
+export async function loadAllUserProfiles(): Promise<UserProfile[]> {
+  if (!db || isLocalMode) return [];
+  try {
+    const usersRef = collection(db, 'users');
+    const snap = await getDocs(usersRef);
+    return snap.docs.map((d) => d.data() as UserProfile);
+  } catch (err) {
+    console.warn('Firestore loadAllUserProfiles error:', err);
+    return [];
+  }
+}
+
+/**
+ * Update partial user profile in Firestore.
+ */
+export async function updateUserProfile(uid: string, updates: Partial<UserProfile>): Promise<boolean> {
+  if (!db || isLocalMode) return false;
+  try {
+    const docRef = doc(db, 'users', uid);
+    await updateDoc(docRef, {
+      ...updates,
+      updatedAt: serverTimestamp(),
+    });
+    return true;
+  } catch (err) {
+    console.warn('Firestore updateUserProfile error:', err);
+    return false;
+  }
+}
 
 // ─── CASES ──────────────────────────────────────────────────────────────────
 
@@ -39,10 +112,64 @@ export async function saveCase(legalCase: LegalCase): Promise<boolean> {
     // Store case metadata without the full evidence array (evidence is a subcollection)
     const { evidence: _evidence, ...caseMetadata } = legalCase;
     await setDoc(docRef, { ...caseMetadata, updatedAt: serverTimestamp() }, { merge: true });
+
+    // Sync members subcollection
+    if (legalCase.members && legalCase.members.length > 0) {
+      for (const m of legalCase.members) {
+        const memberRef = doc(db, 'cases', legalCase.id, 'members', m.uid);
+        await setDoc(memberRef, m, { merge: true });
+      }
+    }
+
     return true;
   } catch (err) {
     console.warn('Firestore saveCase error:', err);
     return false;
+  }
+}
+
+/**
+ * Assign a member to a case subcollection in Firestore.
+ */
+export async function saveCaseMember(caseId: string, member: CaseMember): Promise<boolean> {
+  if (!db || isLocalMode) return false;
+  try {
+    const memberRef = doc(db, 'cases', caseId, 'members', member.uid);
+    await setDoc(memberRef, { ...member, assignedAt: serverTimestamp() }, { merge: true });
+    return true;
+  } catch (err) {
+    console.warn('Firestore saveCaseMember error:', err);
+    return false;
+  }
+}
+
+/**
+ * Revoke/delete a member from a case subcollection in Firestore.
+ */
+export async function deleteCaseMember(caseId: string, memberUid: string): Promise<boolean> {
+  if (!db || isLocalMode) return false;
+  try {
+    const memberRef = doc(db, 'cases', caseId, 'members', memberUid);
+    await deleteDoc(memberRef);
+    return true;
+  } catch (err) {
+    console.warn('Firestore deleteCaseMember error:', err);
+    return false;
+  }
+}
+
+/**
+ * Load members for a specific case from Firestore subcollection.
+ */
+export async function loadCaseMembers(caseId: string): Promise<CaseMember[]> {
+  if (!db || isLocalMode) return [];
+  try {
+    const membersRef = collection(db, 'cases', caseId, 'members');
+    const snapshot = await getDocs(membersRef);
+    return snapshot.docs.map((d) => d.data() as CaseMember);
+  } catch (err) {
+    console.warn('Firestore loadCaseMembers error:', err);
+    return [];
   }
 }
 
