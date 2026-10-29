@@ -20,19 +20,23 @@ export const LoginPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const success = await login(email, password);
-    if (success) {
+    const res = await login(email, password);
+    if (res.success) {
       navigate('/');
     } else {
-      setError('Authentication failed. Use a valid official court email or try a one-click demo login below.');
+      setError(res.error || 'Authentication failed. Use a valid official court email or try a one-click demo login below.');
     }
   };
 
   const handleQuickLogin = async (role: UserRole) => {
     const user = MOCK_USERS.find((u) => u.role === role);
     if (user) {
-      await login(user.email, undefined, role);
-      navigate('/');
+      const res = await login(user.email, undefined, role);
+      if (res.success) {
+        navigate('/');
+      } else {
+        setError(res.error || 'Login failed for this role.');
+      }
     }
   };
 
@@ -143,20 +147,41 @@ export const LoginPage: React.FC = () => {
           <div className="text-[10px] font-medium uppercase tracking-wider text-gray-400 text-center">
             One-Click Role Demonstration Login
           </div>
-          <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
             <button
               onClick={() => handleQuickLogin('super_admin')}
               className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
             >
               <div className="font-medium text-[11px] text-gray-900">Super Admin</div>
-              <div className="text-[9px] text-gray-500 truncate">Justice Sophia Adinyira</div>
+              <div className="text-[9px] text-gray-500 truncate">Justice S. Adinyira</div>
+            </button>
+            <button
+              onClick={() => handleQuickLogin('prosecutor')}
+              className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
+            >
+              <div className="font-medium text-[11px] text-gray-900">Prosecutor</div>
+              <div className="text-[9px] text-gray-500 truncate">Hon. A. Tuah-Yeboah</div>
             </button>
             <button
               onClick={() => handleQuickLogin('lawyer')}
               className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
             >
-              <div className="font-medium text-[11px] text-gray-900">Lead Counsel / Lawyer</div>
-              <div className="text-[9px] text-gray-500 truncate">Abena Osei-Mensah</div>
+              <div className="font-medium text-[11px] text-gray-900">Defense Counsel</div>
+              <div className="text-[9px] text-gray-500 truncate">Mrs. A. Osei-Mensah</div>
+            </button>
+            <button
+              onClick={() => handleQuickLogin('investigator')}
+              className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
+            >
+              <div className="font-medium text-[11px] text-gray-900">Investigator</div>
+              <div className="text-[9px] text-gray-500 truncate">D/C/Insp. Eric Addo</div>
+            </button>
+            <button
+              onClick={() => handleQuickLogin('viewer')}
+              className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
+            >
+              <div className="font-medium text-[11px] text-gray-900">Viewer / Researcher</div>
+              <div className="text-[9px] text-gray-500 truncate">Kofi Mensah</div>
             </button>
             <button
               onClick={() => handleQuickLogin('org_admin')}
@@ -164,13 +189,6 @@ export const LoginPage: React.FC = () => {
             >
               <div className="font-medium text-[11px] text-gray-900">Court Registrar</div>
               <div className="text-[9px] text-gray-500 truncate">Benjamin Kwakye</div>
-            </button>
-            <button
-              onClick={() => handleQuickLogin('reviewer')}
-              className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
-            >
-              <div className="font-medium text-[11px] text-gray-900">CID Investigator</div>
-              <div className="text-[9px] text-gray-500 truncate">D/C/Insp Eric Addo</div>
             </button>
           </div>
         </div>

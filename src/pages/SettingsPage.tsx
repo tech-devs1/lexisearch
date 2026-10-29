@@ -22,7 +22,7 @@ import { useCase } from '../context/CaseContext';
 import { globalAuditService } from '../services/auditService';
 
 export const SettingsPage: React.FC = () => {
-  const { currentUser, canManageUsers } = useAuth();
+  const { currentUser, canManageUsers, canManageSettings } = useAuth();
   const { cases, evidenceList, clearAllMockData } = useCase();
   const [saved, setSaved] = useState(false);
 
@@ -417,7 +417,7 @@ export const SettingsPage: React.FC = () => {
             { label: 'Storage Provider', val: 'Cloudflare R2 (API & Vault Encrypted)', icon: Globe },
             { label: 'Firebase Project', val: 'glies-6c39a (Auth, Firestore, DB)', icon: HardDrive },
             { label: 'Evidence Bucket', val: 'gleis-evidence (Cloudflare R2)', icon: Globe },
-            { label: 'Auth Standard', val: 'Firebase Auth + RBAC (4 roles)', icon: Lock },
+            { label: 'Auth Standard', val: 'Firebase Auth + Judicial RBAC (5 Core Personas)', icon: Lock },
             { label: 'Evidence Integrity', val: 'SHA-256 + HMAC Audit Chain', icon: ShieldCheck },
             { label: 'Compliance', val: 'Ghana Evidence Act, NRCD 323', icon: FileCheck },
             { label: 'Voice Search', val: 'Web Speech STT (English / Dialect)', icon: Mic },

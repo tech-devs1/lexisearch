@@ -6,7 +6,7 @@ export interface CaseMember {
   uid: string;
   email: string;
   displayName: string;
-  role: 'owner' | 'lead_counsel' | 'counsel' | 'investigator' | 'viewer';
+  role: 'owner' | 'lead_counsel' | 'counsel' | 'prosecutor' | 'investigator' | 'viewer';
   assignedAt: string;
 }
 

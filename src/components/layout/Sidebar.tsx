@@ -30,7 +30,7 @@ interface NavSection {
 }
 
 export const Sidebar: React.FC = () => {
-  const { canManageUsers } = useAuth();
+  const { canManageUsers, canManageSettings } = useAuth();
   const { activeCase, bookmarks } = useCase();
 
   const sections: NavSection[] = [
@@ -58,7 +58,9 @@ export const Sidebar: React.FC = () => {
         ...(canManageUsers()
           ? [{ to: '/users', label: 'User Roles', icon: Users }]
           : []),
-        { to: '/settings', label: 'Settings', icon: Settings },
+        ...(canManageSettings()
+          ? [{ to: '/settings', label: 'Settings', icon: Settings }]
+          : []),
       ],
     },
   ];

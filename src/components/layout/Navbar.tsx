@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useCase } from '../../context/CaseContext';
-import { UserRole } from '../../types/auth';
+import { UserRole, ROLE_LABELS } from '../../types/auth';
 import { 
   Scale, 
   Shield, 
@@ -24,10 +24,13 @@ export const Navbar: React.FC = () => {
   const navigate = useNavigate();
 
   const roleLabels: Record<UserRole, { label: string; dot: string }> = {
-    super_admin: { label: 'Super Admin', dot: 'bg-gray-900' },
-    org_admin: { label: 'Court Registrar', dot: 'bg-gray-600' },
-    lawyer: { label: 'Counsel / Lawyer', dot: 'bg-gray-500' },
-    reviewer: { label: 'Investigator', dot: 'bg-gray-400' },
+    super_admin: { label: ROLE_LABELS.super_admin, dot: 'bg-gray-900' },
+    prosecutor: { label: ROLE_LABELS.prosecutor, dot: 'bg-gray-800' },
+    lawyer: { label: ROLE_LABELS.lawyer, dot: 'bg-gray-700' },
+    investigator: { label: ROLE_LABELS.investigator, dot: 'bg-gray-600' },
+    viewer: { label: ROLE_LABELS.viewer, dot: 'bg-gray-400' },
+    org_admin: { label: ROLE_LABELS.org_admin, dot: 'bg-gray-500' },
+    reviewer: { label: ROLE_LABELS.reviewer, dot: 'bg-gray-400' },
   };
 
   const handleQuickSearch = (e: React.FormEvent) => {
@@ -159,7 +162,14 @@ export const Navbar: React.FC = () => {
               <div className="text-[10px] font-mono font-medium text-gray-400 px-2 py-1 uppercase tracking-wider">
                 Simulate Role (RBAC)
               </div>
-              {(['super_admin', 'org_admin', 'lawyer', 'reviewer'] as UserRole[]).map((r) => (
+              {([
+                'super_admin',
+                'prosecutor',
+                'lawyer',
+                'investigator',
+                'viewer',
+                'org_admin',
+              ] as UserRole[]).map((r) => (
                 <button
                   key={r}
                   onClick={() => {
@@ -171,8 +181,8 @@ export const Navbar: React.FC = () => {
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <span className={`w-1.5 h-1.5 rounded-full ${roleLabels[r].dot}`} />
-                    <span>{roleLabels[r].label}</span>
+                    <span className={`w-1.5 h-1.5 rounded-full ${roleLabels[r]?.dot || 'bg-gray-400'}`} />
+                    <span>{roleLabels[r]?.label || r}</span>
                   </div>
                   {role === r && <CheckCircle2 className="w-3 h-3 text-gray-900" />}
                 </button>

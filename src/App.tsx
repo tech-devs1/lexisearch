@@ -15,21 +15,31 @@ import { BookmarksPage } from './pages/BookmarksPage';
 import { AuditPage } from './pages/AuditPage';
 import { UserManagementPage } from './pages/UserManagementPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { UnauthorizedPage } from './pages/UnauthorizedPage';
 
-// Protected Route Guard
+// Protected Route Guard (enforces active account)
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser } = useAuth();
-  if (!currentUser) {
+  if (!currentUser || currentUser.isActive === false) {
     return <Navigate to="/login" replace />;
   }
   return <>{children}</>;
 };
 
-// Admin Guard
+// Admin Guard (Super Admin & Org Admin only)
 const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { canManageUsers } = useAuth();
   if (!canManageUsers()) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/unauthorized" replace />;
+  }
+  return <>{children}</>;
+};
+
+// Settings Guard (Super Admin only)
+const SettingsRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { canManageSettings } = useAuth();
+  if (!canManageSettings()) {
+    return <Navigate to="/unauthorized" replace />;
   }
   return <>{children}</>;
 };
@@ -41,6 +51,7 @@ export const App: React.FC = () => {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
             <Route
               path="/"
@@ -66,7 +77,14 @@ export const App: React.FC = () => {
                   </AdminRoute>
                 }
               />
-              <Route path="settings" element={<SettingsPage />} />
+              <Route
+                path="settings"
+                element={
+                  <SettingsRoute>
+                    <SettingsPage />
+                  </SettingsRoute>
+                }
+              />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>
