@@ -5,9 +5,12 @@ import { globalAuditService } from '../services/auditService';
 import { auth, isLocalMode } from '../services/firebase';
 import {
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
   sendPasswordResetEmail,
   signOut,
   onAuthStateChanged,
+  updateProfile,
 } from 'firebase/auth';
 import {
   isUserActive,
@@ -31,6 +34,17 @@ interface AuthContextType {
   role: UserRole;
   isAuthLoading: boolean;
   login: (email: string, password?: string, role?: UserRole) => Promise<{ success: boolean; error?: string }>;
+  register: (data: {
+    email: string;
+    password?: string;
+    displayName: string;
+    accountType?: 'individual' | 'organization' | 'court';
+    organizationName?: string;
+    barNumber?: string;
+    division?: string;
+    role?: UserRole;
+  }) => Promise<{ success: boolean; error?: string }>;
+  sendEmailVerificationNotice: () => Promise<boolean>;
   logout: () => void;
   switchRole: (role: UserRole) => void;
   sendPasswordReset: (email: string) => Promise<void>;
@@ -287,6 +301,107 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Real User Registration with Email Verification & Account Typing
+  const register = async (data: {
+    email: string;
+    password?: string;
+    displayName: string;
+    accountType?: 'individual' | 'organization' | 'court';
+    organizationName?: string;
+    barNumber?: string;
+    division?: string;
+    role?: UserRole;
+  }): Promise<{ success: boolean; error?: string }> => {
+    setIsAuthLoading(true);
+    const normalizedEmail = data.email.trim().toLowerCase();
+
+    // Check if user already exists
+    if (users.some((u) => u.email.toLowerCase() === normalizedEmail)) {
+      setIsAuthLoading(false);
+      return { success: false, error: 'An officer account with this official email already exists.' };
+    }
+
+    let uid = `user_${Date.now()}`;
+    let emailVerified = false;
+
+    // Real Firebase registration if available
+    if (data.password && auth && !isLocalMode) {
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, normalizedEmail, data.password);
+        uid = cred.user.uid;
+        emailVerified = cred.user.emailVerified;
+        await updateProfile(cred.user, { displayName: data.displayName.trim() }).catch(() => {});
+        await sendEmailVerification(cred.user).catch(() => {});
+      } catch (fbErr: any) {
+        console.warn('Firebase registration notice:', fbErr.message);
+        if (fbErr.code === 'auth/email-already-in-use') {
+          setIsAuthLoading(false);
+          return { success: false, error: 'Email already registered in Firebase identity vault.' };
+        }
+      }
+    }
+
+    // Role assignment based on registration type
+    let role: UserRole = data.role || 'viewer';
+    if (data.accountType === 'court') {
+      role = 'org_admin'; // Court registrar / administrator
+    } else if (data.accountType === 'organization') {
+      role = 'lawyer';
+    } else if (data.barNumber) {
+      role = 'lawyer';
+    }
+
+    const newProfile: UserProfile = {
+      uid,
+      email: normalizedEmail,
+      displayName: data.displayName.trim(),
+      role,
+      accountType: data.accountType || 'individual',
+      organizationId: data.accountType === 'organization' ? `org_${Date.now()}` : 'org_judicial_service',
+      organizationName:
+        data.organizationName?.trim() ||
+        (data.accountType === 'court' ? 'High Court of Ghana' : 'Judicial Service of Ghana'),
+      barNumber: data.barNumber?.trim() || undefined,
+      division:
+        data.division?.trim() ||
+        (data.accountType === 'court'
+          ? 'Court Administration & Registry'
+          : 'Commercial & Criminal Litigation'),
+      createdAt: new Date().toISOString(),
+      lastLoginAt: new Date().toISOString(),
+      emailVerified,
+      isActive: true,
+    };
+
+    setUsers((prev) => [...prev, newProfile]);
+    setCurrentUser(newProfile);
+
+    await globalAuditService.logAction({
+      caseId: 'system',
+      action: 'AUTH_LOGIN',
+      actionDescription: `New officer registered: ${newProfile.displayName} [${newProfile.role.toUpperCase()}] (${newProfile.accountType || 'individual'})`,
+      userId: newProfile.uid,
+      userEmail: newProfile.email,
+      userRole: newProfile.role,
+    });
+
+    setIsAuthLoading(false);
+    return { success: true };
+  };
+
+  const sendEmailVerificationNotice = async (): Promise<boolean> => {
+    if (auth && auth.currentUser && !isLocalMode) {
+      try {
+        await sendEmailVerification(auth.currentUser);
+        return true;
+      } catch (err) {
+        console.warn('Email verification dispatch notice:', err);
+        return false;
+      }
+    }
+    return true;
+  };
+
   // Administrator: Update User Role
   const updateUserRole = async (userId: string, newRole: UserRole): Promise<boolean> => {
     if (!canManageUsers(currentUser)) {
@@ -397,6 +512,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role: currentUser?.role || 'viewer',
         isAuthLoading,
         login,
+        register,
+        sendEmailVerificationNotice,
         logout,
         switchRole,
         sendPasswordReset,

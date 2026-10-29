@@ -1,30 +1,113 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Scale, Lock, Mail, Shield, CheckCircle2, ArrowRight, Loader2 } from 'lucide-react';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { 
+  Scale, 
+  Lock, 
+  Mail, 
+  Shield, 
+  CheckCircle2, 
+  ArrowRight, 
+  Loader2, 
+  User, 
+  Building2, 
+  Landmark, 
+  ChevronDown, 
+  ChevronUp, 
+  AlertCircle,
+  FileText
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types/auth';
 import { MOCK_USERS } from '../data/mockEvidence';
 
-export const LoginPage: React.FC = () => {
-  const { login, sendPasswordReset, isAuthLoading } = useAuth();
-  const navigate = useNavigate();
+type AuthTab = 'signin' | 'register';
+type OnboardingType = 'individual' | 'organization' | 'court';
 
+export const LoginPage: React.FC = () => {
+  const { login, register, sendPasswordReset, isAuthLoading } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Tab State
+  const initialTab = searchParams.get('mode') === 'register' ? 'register' : 'signin';
+  const [activeTab, setActiveTab] = useState<AuthTab>(initialTab);
+
+  // Sign In State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [recoveryEmail, setRecoveryEmail] = useState('');
   const [recoverySent, setRecoverySent] = useState(false);
   const [showRecovery, setShowRecovery] = useState(false);
-  const [error, setError] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [authSuccess, setAuthSuccess] = useState('');
   const [isRecovering, setIsRecovering] = useState(false);
+  const [showDemoLogins, setShowDemoLogins] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Registration State
+  const [regType, setRegType] = useState<OnboardingType>('individual');
+  const [fullName, setFullName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [orgName, setOrgName] = useState('');
+  const [barNumber, setBarNumber] = useState('');
+  const [courtDivision, setCourtDivision] = useState('');
+
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setAuthError('');
+    setAuthSuccess('');
+
     const res = await login(email, password);
     if (res.success) {
-      navigate('/');
+      navigate('/dashboard');
     } else {
-      setError(res.error || 'Authentication failed. Use a valid official court email or try a one-click demo login below.');
+      setAuthError(res.error || 'Authentication failed. Please verify credentials or try demo access.');
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    setAuthSuccess('');
+
+    if (regPassword && regPassword !== confirmPassword) {
+      setAuthError('Passwords do not match. Please re-enter.');
+      return;
+    }
+
+    if (regPassword && regPassword.length < 6) {
+      setAuthError('Password must be at least 6 characters.');
+      return;
+    }
+
+    let defaultRole: UserRole = 'viewer';
+    if (regType === 'individual') {
+      defaultRole = barNumber.trim() ? 'lawyer' : 'viewer';
+    } else if (regType === 'organization') {
+      defaultRole = 'lawyer';
+    } else if (regType === 'court') {
+      defaultRole = 'org_admin';
+    }
+
+    const res = await register({
+      email: regEmail,
+      password: regPassword,
+      displayName: fullName,
+      accountType: regType,
+      organizationName: regType === 'court' ? (orgName || 'Judicial Service of Ghana') : orgName,
+      barNumber: barNumber.trim() || undefined,
+      division: courtDivision.trim() || undefined,
+      role: defaultRole,
+    });
+
+    if (res.success) {
+      setAuthSuccess('Account registered successfully. Redirecting to your workspace...');
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1200);
+    } else {
+      setAuthError(res.error || 'Failed to create officer account.');
     }
   };
 
@@ -33,9 +116,9 @@ export const LoginPage: React.FC = () => {
     if (user) {
       const res = await login(user.email, undefined, role);
       if (res.success) {
-        navigate('/');
+        navigate('/dashboard');
       } else {
-        setError(res.error || 'Login failed for this role.');
+        setAuthError(res.error || 'Login failed for this role.');
       }
     }
   };
@@ -54,144 +137,408 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F8F8] flex flex-col justify-center items-center p-4">
-      <div className="max-w-md w-full bg-white border border-gray-200 rounded-2xl p-8 shadow-lg space-y-6">
-        {/* Emblem & Header */}
+    <div className="min-h-screen bg-[#FAFAFA] flex flex-col justify-center items-center p-4">
+      <div className="max-w-lg w-full bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+        
+        {/* Emblem & Top Bar */}
         <div className="text-center space-y-3">
-          <div className="w-14 h-14 mx-auto rounded-xl bg-gray-900 flex items-center justify-center text-white shadow-sm">
-            <Scale className="w-7 h-7" />
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900 tracking-wide">
+          <Link to="/" className="inline-flex flex-col items-center group">
+            <div className="w-12 h-12 rounded-xl bg-gray-900 flex items-center justify-center text-white shadow-xs group-hover:bg-black transition">
+              <Scale className="w-6 h-6" />
+            </div>
+            <h1 className="text-base font-semibold text-gray-900 tracking-wide mt-3">
               GHANA LEGAL EVIDENCE INTELLIGENCE SYSTEM
             </h1>
-            <p className="text-xs text-gray-500 font-medium uppercase tracking-widest mt-1">
+            <p className="text-[11px] text-gray-500 font-medium uppercase tracking-widest mt-0.5">
               GLEIS · Judicial Service of Ghana
             </p>
-          </div>
+          </Link>
         </div>
 
-        {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-          <div>
-            <label className="block text-gray-700 font-medium mb-1.5">Official Court Email</label>
-            <div className="relative">
-              <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        {/* Tab Switcher: Sign In vs Create Account */}
+        <div className="grid grid-cols-2 p-1 bg-gray-100 rounded-lg text-xs font-medium border border-gray-200/80">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('signin');
+              setAuthError('');
+              setAuthSuccess('');
+            }}
+            className={`py-2 rounded-md transition text-center ${
+              activeTab === 'signin'
+                ? 'bg-white text-gray-900 shadow-xs font-semibold'
+                : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            Sign In to Session
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('register');
+              setAuthError('');
+              setAuthSuccess('');
+            }}
+            className={`py-2 rounded-md transition text-center ${
+              activeTab === 'register'
+                ? 'bg-white text-gray-900 shadow-xs font-semibold'
+                : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            Create Officer Account
+          </button>
+        </div>
+
+        {/* Global Feedback */}
+        {authError && (
+          <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+            <span>{authError}</span>
+          </div>
+        )}
+
+        {authSuccess && (
+          <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-start gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+            <span>{authSuccess}</span>
+          </div>
+        )}
+
+        {/* ============================================================ */}
+        {/* SIGN IN TAB */}
+        {/* ============================================================ */}
+        {activeTab === 'signin' && (
+          <form onSubmit={handleSignIn} className="space-y-4 text-xs">
+            <div>
+              <label className="block text-gray-700 font-medium mb-1.5">Official Court or Firm Email</label>
+              <div className="relative">
+                <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="counsel@chambers.gh or officer@judicial.gov.gh"
+                  className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-gray-700 font-medium">Access Password</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRecovery(true);
+                    setRecoveryEmail(email);
+                  }}
+                  className="text-[11px] text-gray-500 hover:text-gray-900 transition"
+                >
+                  Forgot password?
+                </button>
+              </div>
+              <div className="relative">
+                <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
+                />
+              </div>
+              <p className="text-[11px] text-gray-400 mt-1">
+                Enter your password or use quick demo profiles below.
+              </p>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isAuthLoading}
+              className="w-full py-2.5 bg-gray-900 hover:bg-black disabled:opacity-60 text-white font-medium rounded-lg text-xs shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+            >
+              {isAuthLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Authenticating Session...</span>
+                </>
+              ) : (
+                <>
+                  <span>Authenticate Secure Session</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </form>
+        )}
+
+        {/* ============================================================ */}
+        {/* CREATE ACCOUNT / ONBOARDING TAB */}
+        {/* ============================================================ */}
+        {activeTab === 'register' && (
+          <form onSubmit={handleRegister} className="space-y-4 text-xs">
+            
+            {/* Account Type Selector */}
+            <div>
+              <label className="block text-gray-700 font-medium mb-1.5">Select Account Archetype</label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRegType('individual')}
+                  className={`p-2.5 rounded-lg border text-left flex flex-col items-start gap-1 transition ${
+                    regType === 'individual'
+                      ? 'border-gray-900 bg-gray-50 text-gray-900 font-medium ring-1 ring-gray-900'
+                      : 'border-gray-200 hover:bg-gray-50 text-gray-600'
+                  }`}
+                >
+                  <User className="w-4 h-4" />
+                  <span className="text-[11px] font-semibold">Individual</span>
+                  <span className="text-[9px] text-gray-400 leading-tight">Private research</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRegType('organization')}
+                  className={`p-2.5 rounded-lg border text-left flex flex-col items-start gap-1 transition ${
+                    regType === 'organization'
+                      ? 'border-gray-900 bg-gray-50 text-gray-900 font-medium ring-1 ring-gray-900'
+                      : 'border-gray-200 hover:bg-gray-50 text-gray-600'
+                  }`}
+                >
+                  <Building2 className="w-4 h-4" />
+                  <span className="text-[11px] font-semibold">Law Firm</span>
+                  <span className="text-[9px] text-gray-400 leading-tight">Chambers & teams</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRegType('court')}
+                  className={`p-2.5 rounded-lg border text-left flex flex-col items-start gap-1 transition ${
+                    regType === 'court'
+                      ? 'border-gray-900 bg-gray-50 text-gray-900 font-medium ring-1 ring-gray-900'
+                      : 'border-gray-200 hover:bg-gray-50 text-gray-600'
+                  }`}
+                >
+                  <Landmark className="w-4 h-4" />
+                  <span className="text-[11px] font-semibold">Court Registry</span>
+                  <span className="text-[9px] text-gray-400 leading-tight">Judicial onboarding</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Full Legal Name */}
+            <div>
+              <label className="block text-gray-700 font-medium mb-1">
+                {regType === 'court' ? 'Presiding Registrar / Principal Officer' : 'Full Legal Name'}
+              </label>
+              <input
+                type="text"
+                required
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder={regType === 'court' ? 'Chief Registrar Kwakye' : 'Mrs. Akosua Mensah, Esq.'}
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+              />
+            </div>
+
+            {/* Official Email */}
+            <div>
+              <label className="block text-gray-700 font-medium mb-1">Official Contact Email</label>
               <input
                 type="email"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="officer@judicial.gov.gh"
-                className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
+                value={regEmail}
+                onChange={(e) => setRegEmail(e.target.value)}
+                placeholder={regType === 'court' ? 'registrar.registry@judicial.gov.gh' : 'counsel@ghanalawfirm.com'}
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
               />
             </div>
-          </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-gray-700 font-medium">Access Password</label>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowRecovery(true);
-                  setRecoveryEmail(email);
-                }}
-                className="text-[11px] text-gray-500 hover:text-gray-900 transition"
-              >
-                Forgot password?
-              </button>
-            </div>
-            <div className="relative">
-              <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
-                className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
-              />
-            </div>
-            <p className="text-[10px] text-gray-400 mt-1">
-              Leave password blank to use demo mode (mock session).
-            </p>
-          </div>
+            {/* Organization / Firm / Court Name */}
+            {regType !== 'individual' && (
+              <div>
+                <label className="block text-gray-700 font-medium mb-1">
+                  {regType === 'court' ? 'Court Jurisdiction & Bench' : 'Chambers / Law Firm Name'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={orgName}
+                  onChange={(e) => setOrgName(e.target.value)}
+                  placeholder={regType === 'court' ? 'High Court of Ghana, Commercial Division 2' : 'Bentsi-Enchill & Letsa Chambers'}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                />
+              </div>
+            )}
 
-          {error && (
-            <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs">
-              {error}
+            {/* Professional Credentials / Bar Number */}
+            {regType === 'individual' && (
+              <div>
+                <label className="block text-gray-700 font-medium mb-1">Ghana Bar Association License / ID (Optional)</label>
+                <input
+                  type="text"
+                  value={barNumber}
+                  onChange={(e) => setBarNumber(e.target.value)}
+                  placeholder="GBA/AC/2021/0491"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 font-mono focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                />
+                <span className="text-[10px] text-gray-400">Enables Defense Counsel case features upon verification.</span>
+              </div>
+            )}
+
+            {regType === 'court' && (
+              <div>
+                <label className="block text-gray-700 font-medium mb-1">Registry Division / Docket Code</label>
+                <input
+                  type="text"
+                  value={courtDivision}
+                  onChange={(e) => setCourtDivision(e.target.value)}
+                  placeholder="ACC/COMM/REG-01"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 font-mono focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                />
+              </div>
+            )}
+
+            {/* Password Fields */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-gray-700 font-medium mb-1">Password</label>
+                <input
+                  type="password"
+                  required
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-700 font-medium mb-1">Confirm Password</label>
+                <input
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                />
+              </div>
+            </div>
+
+            {/* Security Commitment */}
+            <div className="p-2.5 rounded-lg bg-gray-50 border border-gray-200 text-[11px] text-gray-600 space-y-1">
+              <div className="flex items-center gap-1.5 font-medium text-gray-900">
+                <Shield className="w-3.5 h-3.5 text-gray-800" />
+                <span>Section 7 Evidence Act 1975 (NRCD 323) Compliance</span>
+              </div>
+              <p className="text-[10px] text-gray-500">
+                New accounts are provisioned with role-based access control and sovereign workspace isolation. Digital exhibits are cryptographically hashed upon upload.
+              </p>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isAuthLoading}
+              className="w-full py-2.5 bg-gray-900 hover:bg-black disabled:opacity-60 text-white font-medium rounded-lg text-xs shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+            >
+              {isAuthLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Provisioning Account...</span>
+                </>
+              ) : (
+                <>
+                  <span>Create Account & Verify Credentials</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </form>
+        )}
+
+        {/* Collapsible One-Click Demo Role Login (Evaluation Aid) */}
+        <div className="pt-2 border-t border-gray-200">
+          <button
+            type="button"
+            onClick={() => setShowDemoLogins(!showDemoLogins)}
+            className="w-full py-1.5 flex items-center justify-between text-gray-500 hover:text-gray-900 text-xs transition"
+          >
+            <span className="font-mono text-[11px] uppercase tracking-wider">
+              Evaluator Demo Credentials & Instant Logins
+            </span>
+            {showDemoLogins ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
+
+          {showDemoLogins && (
+            <div className="mt-3 pt-3 border-t border-dashed border-gray-200 space-y-2">
+              <p className="text-[11px] text-gray-500">
+                Select any authorized legal persona to test role-based access control and case permission segregation:
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('super_admin')}
+                  className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
+                >
+                  <div className="font-medium text-[11px] text-gray-900">Super Admin</div>
+                  <div className="text-[9px] text-gray-500 truncate">Justice S. Adinyira</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('prosecutor')}
+                  className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
+                >
+                  <div className="font-medium text-[11px] text-gray-900">Prosecutor</div>
+                  <div className="text-[9px] text-gray-500 truncate">Hon. A. Tuah-Yeboah</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('lawyer')}
+                  className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
+                >
+                  <div className="font-medium text-[11px] text-gray-900">Defense Counsel</div>
+                  <div className="text-[9px] text-gray-500 truncate">Mrs. A. Osei-Mensah</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('investigator')}
+                  className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
+                >
+                  <div className="font-medium text-[11px] text-gray-900">Investigator</div>
+                  <div className="text-[9px] text-gray-500 truncate">D/C/Insp. Eric Addo</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('viewer')}
+                  className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
+                >
+                  <div className="font-medium text-[11px] text-gray-900">Legal Researcher</div>
+                  <div className="text-[9px] text-gray-500 truncate">Kofi Mensah</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('org_admin')}
+                  className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
+                >
+                  <div className="font-medium text-[11px] text-gray-900">Court Registrar</div>
+                  <div className="text-[9px] text-gray-500 truncate">Benjamin Kwakye</div>
+                </button>
+              </div>
             </div>
           )}
-
-          <button
-            type="submit"
-            disabled={isAuthLoading}
-            className="w-full py-3 bg-gray-900 hover:bg-black disabled:opacity-60 text-white font-medium rounded-lg text-xs shadow-sm transition flex items-center justify-center gap-2"
-          >
-            {isAuthLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Authenticating...</span>
-              </>
-            ) : (
-              <>
-                <span>Authenticate Secure Session</span>
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
-          </button>
-        </form>
-
-        {/* Quick Role Selectors for Evaluation */}
-        <div className="pt-4 border-t border-gray-200 space-y-2">
-          <div className="text-[10px] font-medium uppercase tracking-wider text-gray-400 text-center">
-            One-Click Role Demonstration Login
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-            <button
-              onClick={() => handleQuickLogin('super_admin')}
-              className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
-            >
-              <div className="font-medium text-[11px] text-gray-900">Super Admin</div>
-              <div className="text-[9px] text-gray-500 truncate">Justice S. Adinyira</div>
-            </button>
-            <button
-              onClick={() => handleQuickLogin('prosecutor')}
-              className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
-            >
-              <div className="font-medium text-[11px] text-gray-900">Prosecutor</div>
-              <div className="text-[9px] text-gray-500 truncate">Hon. A. Tuah-Yeboah</div>
-            </button>
-            <button
-              onClick={() => handleQuickLogin('lawyer')}
-              className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
-            >
-              <div className="font-medium text-[11px] text-gray-900">Defense Counsel</div>
-              <div className="text-[9px] text-gray-500 truncate">Mrs. A. Osei-Mensah</div>
-            </button>
-            <button
-              onClick={() => handleQuickLogin('investigator')}
-              className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
-            >
-              <div className="font-medium text-[11px] text-gray-900">Investigator</div>
-              <div className="text-[9px] text-gray-500 truncate">D/C/Insp. Eric Addo</div>
-            </button>
-            <button
-              onClick={() => handleQuickLogin('viewer')}
-              className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
-            >
-              <div className="font-medium text-[11px] text-gray-900">Viewer / Researcher</div>
-              <div className="text-[9px] text-gray-500 truncate">Kofi Mensah</div>
-            </button>
-            <button
-              onClick={() => handleQuickLogin('org_admin')}
-              className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
-            >
-              <div className="font-medium text-[11px] text-gray-900">Court Registrar</div>
-              <div className="text-[9px] text-gray-500 truncate">Benjamin Kwakye</div>
-            </button>
-          </div>
         </div>
+
+        {/* Back to Public Landing */}
+        <div className="text-center pt-2">
+          <Link
+            to="/"
+            className="text-[11px] text-gray-400 hover:text-gray-900 transition underline underline-offset-4"
+          >
+            ← Return to GLEIS Public Overview & Legal Framework
+          </Link>
+        </div>
+
       </div>
 
       {/* Password Recovery Modal */}
@@ -200,7 +547,7 @@ export const LoginPage: React.FC = () => {
           <div className="bg-white border border-gray-200 rounded-2xl max-w-sm w-full p-6 shadow-xl space-y-4 text-xs">
             <h3 className="text-sm font-semibold text-gray-900">Judicial Account Recovery</h3>
             <p className="text-gray-500">
-              Enter your official government email to receive password reset credentials from the Judicial Service IT Bureau.
+              Enter your official government or firm email to receive password reset credentials from the Judicial Service IT Bureau.
             </p>
             <input
               type="email"
@@ -210,13 +557,14 @@ export const LoginPage: React.FC = () => {
               className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
             />
             {recoverySent && (
-              <div className="p-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-center flex items-center justify-center gap-2">
-                <CheckCircle2 className="w-4 h-4" />
-                Recovery link dispatched to your official email.
+              <div className="p-2.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg text-center flex items-center justify-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Recovery instructions dispatched to your official email.</span>
               </div>
             )}
             <div className="flex justify-end gap-2 pt-2">
               <button
+                type="button"
                 onClick={() => {
                   setShowRecovery(false);
                   setRecoverySent(false);
@@ -227,12 +575,13 @@ export const LoginPage: React.FC = () => {
               </button>
               {!recoverySent && (
                 <button
+                  type="button"
                   onClick={handlePasswordRecovery}
                   disabled={isRecovering || !recoveryEmail.trim()}
                   className="px-3 py-1.5 bg-gray-900 text-white font-medium rounded-lg flex items-center gap-1.5 disabled:opacity-60"
                 >
                   {isRecovering ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                  Send Link
+                  Send Recovery Link
                 </button>
               )}
             </div>

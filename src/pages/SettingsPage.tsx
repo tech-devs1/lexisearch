@@ -42,16 +42,6 @@ export const SettingsPage: React.FC = () => {
   const [showHashFull, setShowHashFull] = useState(false);
   const [defaultSearchMode, setDefaultSearchMode] = useState('keyword');
   const [transcriptLanguage, setTranscriptLanguage] = useState('en-GH');
-  const [openaiApiKey, setOpenaiApiKey] = useState(() => {
-    return (typeof localStorage !== 'undefined' ? localStorage.getItem('gleis_openai_api_key') : '') || '';
-  });
-  const [geminiApiKey, setGeminiApiKey] = useState(() => {
-    return (
-      (typeof localStorage !== 'undefined' ? localStorage.getItem('gleis_gemini_api_key') : '') ||
-      import.meta.env.VITE_GEMINI_API_KEY ||
-      ''
-    );
-  });
   const [geminiModel, setGeminiModel] = useState(() => getGeminiModel());
   const [isTestingGemini, setIsTestingGemini] = useState(false);
   const [geminiTestFeedback, setGeminiTestFeedback] = useState<{
@@ -63,7 +53,7 @@ export const SettingsPage: React.FC = () => {
     setIsTestingGemini(true);
     setGeminiTestFeedback(null);
     try {
-      const result = await testGeminiApiKey(geminiApiKey);
+      const result = await testGeminiApiKey();
       setGeminiTestFeedback(result);
     } finally {
       setIsTestingGemini(false);
@@ -72,14 +62,13 @@ export const SettingsPage: React.FC = () => {
 
   const handleSave = () => {
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('gleis_openai_api_key', openaiApiKey.trim());
-      saveGeminiConfig(geminiApiKey, geminiModel);
+      localStorage.setItem('gleis_gemini_model', geminiModel);
     }
     if (currentUser) {
       globalAuditService.logAction({
         caseId: 'system',
         action: 'PERMISSION_CHANGE',
-        actionDescription: 'User updated application settings and speech transcription credentials.',
+        actionDescription: 'User updated application preferences and AI model parameters.',
         userId: currentUser.uid,
         userEmail: currentUser.email,
         userRole: currentUser.role,
@@ -305,43 +294,42 @@ export const SettingsPage: React.FC = () => {
             </select>
           </div>
 
+          {/* Server-Managed Gemini AI Intelligence Architecture */}
           <div className="space-y-3 pt-3 border-t border-gray-100">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <div className="font-medium text-gray-900">Google Gemini API Key (Multimodal Transcription & RAG)</div>
-                <div className="text-gray-500 mt-0.5">Unified API key powering courtroom audio/video verbatim transcription, speaker diarization, and evidentiary RAG search.</div>
+                <div className="font-medium text-gray-900 flex items-center gap-2">
+                  <span>Google Gemini Multimodal AI Engine</span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-medium">
+                    Server Managed · Active
+                  </span>
+                </div>
+                <div className="text-gray-500 text-[11px] mt-0.5 max-w-xl">
+                  Unified multimodal intelligence powering courtroom audio/video verbatim transcription, speaker diarization, and evidentiary RAG retrieval. API credentials are encrypted and managed strictly server-side.
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="password"
-                  value={geminiApiKey}
-                  onChange={(e) => setGeminiApiKey(e.target.value)}
-                  placeholder="Paste Google AI Studio Key..."
-                  className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 font-mono text-xs focus:ring-1 focus:ring-gray-900 focus:border-gray-900 w-full sm:w-64"
-                />
-                <button
-                  type="button"
-                  onClick={handleTestGemini}
-                  disabled={isTestingGemini || !geminiApiKey.trim()}
-                  className="px-3 py-1.5 bg-gray-900 hover:bg-black text-white font-medium text-xs rounded-lg disabled:opacity-50 transition shrink-0 shadow-xs"
-                >
-                  {isTestingGemini ? 'Testing...' : 'Test Key'}
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={handleTestGemini}
+                disabled={isTestingGemini}
+                className="px-3 py-1.5 bg-gray-900 hover:bg-black text-white font-medium text-xs rounded-lg disabled:opacity-50 transition shrink-0 shadow-xs flex items-center gap-1.5"
+              >
+                {isTestingGemini ? 'Verifying Connectivity...' : 'Verify AI Engine Health'}
+              </button>
             </div>
 
             {/* Configurable Gemini Model Selection */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-gray-100/60">
               <div>
                 <div className="font-medium text-gray-900 text-xs">Active Gemini Model for Transcription & Reasoning</div>
-                <div className="text-gray-500 text-[11px] mt-0.5">Select a currently supported Google Gemini model for evidence processing.</div>
+                <div className="text-gray-500 text-[11px] mt-0.5">Configured for fast, reliable multimodal legal transcription and question answering.</div>
               </div>
               <select
                 value={geminiModel}
                 onChange={(e) => setGeminiModel(e.target.value)}
                 className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-900 text-xs font-mono focus:ring-1 focus:ring-gray-900 focus:border-gray-900 w-full sm:w-64"
               >
-                <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Recommended · Fast STT & RAG)</option>
+                <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Default · Fast STT & RAG)</option>
                 <option value="gemini-3.5-flash">gemini-3.5-flash (Balanced Multimodal)</option>
                 <option value="gemini-3.8-flash">gemini-3.8-flash (Latest General Multimodal)</option>
               </select>
@@ -363,20 +351,6 @@ export const SettingsPage: React.FC = () => {
                 <span>{geminiTestFeedback.message}</span>
               </div>
             )}
-          </div>
-
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-3 border-t border-gray-100">
-            <div>
-              <div className="font-medium text-gray-900">OpenAI / Whisper API Key (Audio Speech-to-Text)</div>
-              <div className="text-gray-500 mt-0.5">Allows cloud Whisper transcription for newly uploaded audio files with word-level timestamps.</div>
-            </div>
-            <input
-              type="password"
-              value={openaiApiKey}
-              onChange={(e) => setOpenaiApiKey(e.target.value)}
-              placeholder="sk-proj-..."
-              className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 font-mono text-xs focus:ring-1 focus:ring-gray-900 focus:border-gray-900 w-full sm:w-64"
-            />
           </div>
         </div>
       </div>

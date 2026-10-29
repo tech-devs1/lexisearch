@@ -16,6 +16,7 @@ import {
   deleteBookmarkFromFirestore 
 } from '../services/firestoreService';
 import { useAuth } from './AuthContext';
+import { useWorkspace } from './WorkspaceContext';
 import { 
   canUserAccessCase, 
   canCreateCase, 
@@ -47,6 +48,7 @@ const CaseContext = createContext<CaseContextType | undefined>(undefined);
 
 export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser } = useAuth();
+  const { activeWorkspace } = useWorkspace();
 
   // Full repository of cases
   const [allCases, setAllCases] = useState<LegalCase[]>(() => {
@@ -78,11 +80,17 @@ export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isProcessingUpload, setIsProcessingUpload] = useState(false);
   const [uploadStatusMessage, setUploadStatusMessage] = useState('');
 
-  // Granular Case-Level Scoping: Filter cases strictly according to currentUser permissions
+  // Granular Workspace & Case-Level Scoping: Filter cases strictly according to workspace and permissions
   const authorizedCases = useMemo(() => {
     if (!currentUser || !currentUser.isActive) return [];
-    return allCases.filter((c) => canUserAccessCase(currentUser, c));
-  }, [allCases, currentUser]);
+    return allCases.filter((c) => {
+      // If case is assigned to a workspace, only show if it matches current active workspace
+      if (activeWorkspace && c.workspaceId && c.workspaceId !== activeWorkspace.id) {
+        return false;
+      }
+      return canUserAccessCase(currentUser, c);
+    });
+  }, [allCases, currentUser, activeWorkspace]);
 
   // Determine active case from authorized cases only
   const activeCase = useMemo(() => {
@@ -163,6 +171,7 @@ export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const newCaseId = `case_${Date.now()}`;
     const newCase: LegalCase = {
       id: newCaseId,
+      workspaceId: activeWorkspace?.id,
       caseNumber: caseData.caseNumber || `CR/ACC/${Math.floor(1000 + Math.random() * 9000)}/2026`,
       suitNumber: caseData.suitNumber || '',
       title: caseData.title || 'Untitled Legal Matter',

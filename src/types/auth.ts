@@ -36,6 +36,9 @@ export interface UserProfile {
   organizationName: string;
   barNumber?: string; // Ghana Bar Association enrollment number
   division?: string;  // e.g. "Commercial Division, High Court Accra", "Office of the Attorney General"
+  accountType?: 'individual' | 'organization' | 'court';
+  emailVerified?: boolean;
+  activeWorkspaceId?: string;
   createdAt: string;
   lastLoginAt: string;
   isActive: boolean;

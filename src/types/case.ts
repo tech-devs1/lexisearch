@@ -12,6 +12,7 @@ export interface CaseMember {
 
 export interface LegalCase {
   id: string;
+  workspaceId?: string; // Belongs to a Personal, Organization, or Court workspace
   caseNumber: string; // e.g. "CR/ACC/0482/2026", "FTC/012/2026"
   suitNumber?: string;
   title: string;      // e.g. "The Republic v. Kwame Boateng & 2 Ors"

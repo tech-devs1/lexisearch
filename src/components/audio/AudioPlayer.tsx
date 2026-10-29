@@ -51,12 +51,6 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   // Transcription & Edit States
   const [showTranscribeModal, setShowTranscribeModal] = useState(false);
   const [transcribeEngine, setTranscribeEngine] = useState<'gemini' | 'whisper' | 'browser'>('gemini');
-  const [geminiKeyInput, setGeminiKeyInput] = useState(() => {
-    return (typeof localStorage !== 'undefined' ? localStorage.getItem('gleis_gemini_api_key') : '') || '';
-  });
-  const [openaiKeyInput, setOpenaiKeyInput] = useState(() => {
-    return (typeof localStorage !== 'undefined' ? localStorage.getItem('gleis_openai_api_key') : '') || '';
-  });
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcribeStatus, setTranscribeStatus] = useState('');
   const [transcribeError, setTranscribeError] = useState('');
@@ -275,13 +269,6 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     setTranscribeStatus('Retrieving evidence binary from secure vault...');
 
     try {
-      if (geminiKeyInput.trim() && typeof localStorage !== 'undefined') {
-        localStorage.setItem('gleis_gemini_api_key', geminiKeyInput.trim());
-      }
-      if (openaiKeyInput.trim() && typeof localStorage !== 'undefined') {
-        localStorage.setItem('gleis_openai_api_key', openaiKeyInput.trim());
-      }
-
       let audioBlob = await getEvidenceBlob(evidence.id);
 
       if (!audioBlob && audioUrl) {
@@ -296,14 +283,12 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
       setTranscribeStatus(
         transcribeEngine === 'gemini'
-          ? 'Transcribing Ghanaian legal testimony with Google Gemini...'
+          ? 'Transcribing courtroom recording with Google Gemini Multimodal AI...'
           : 'Transcribing word timestamps with OpenAI Whisper...'
       );
 
       const audioFile = new File([audioBlob], evidence.fileName, { type: audioBlob.type || 'audio/mp3' });
       const result = await transcribeAudioFile(audioFile, evidence.id, {
-        geminiKey: geminiKeyInput,
-        apiKey: openaiKeyInput,
         language: 'en-GH',
       });
 
@@ -771,36 +756,16 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                 </button>
               </div>
 
-              {/* Key Input if chosen */}
-              {transcribeEngine === 'gemini' && (
-                <div>
-                  <label className="block text-xs text-gray-700 font-mono text-[11px] mb-1">
-                    Google Gemini API Key:
-                  </label>
-                  <input
-                    type="password"
-                    value={geminiKeyInput}
-                    onChange={(e) => setGeminiKeyInput(e.target.value)}
-                    placeholder="Google AI Studio API Key..."
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 font-mono text-xs focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                  />
+              {/* Credential Status Note */}
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600">
+                <div className="font-medium text-gray-900 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span>Server-Managed AI Infrastructure Active</span>
                 </div>
-              )}
-
-              {transcribeEngine === 'whisper' && (
-                <div>
-                  <label className="block text-xs text-gray-700 font-mono text-[11px] mb-1">
-                    OpenAI API Key:
-                  </label>
-                  <input
-                    type="password"
-                    value={openaiKeyInput}
-                    onChange={(e) => setOpenaiKeyInput(e.target.value)}
-                    placeholder="sk-proj-..."
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 font-mono text-xs focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                  />
+                <div className="text-[11px] text-gray-500 mt-1 leading-relaxed">
+                  Transcription runs securely via authenticated server credentials. Verbatim transcripts, speaking turns, and chronological timestamps are preserved without exposing keys to clients.
                 </div>
-              )}
+              </div>
             </div>
 
             {/* Status & Alerts */}

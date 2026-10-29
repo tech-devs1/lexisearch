@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useCase } from '../../context/CaseContext';
+import { useWorkspace } from '../../context/WorkspaceContext';
 import { UserRole, ROLE_LABELS } from '../../types/auth';
 import { 
   Scale, 
@@ -11,15 +12,21 @@ import {
   LogOut, 
   CheckCircle2,
   Mic,
-  Plus
+  Plus,
+  Landmark,
+  Building2,
+  User,
+  Layers
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export const Navbar: React.FC = () => {
   const { currentUser, role, switchRole, logout } = useAuth();
   const { cases, activeCase, selectCase } = useCase();
+  const { activeWorkspace, userWorkspaces, switchWorkspace } = useWorkspace();
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const [showCaseDropdown, setShowCaseDropdown] = useState(false);
+  const [showWorkspaceDropdown, setShowWorkspaceDropdown] = useState(false);
   const [quickQuery, setQuickQuery] = useState('');
   const navigate = useNavigate();
 
@@ -57,8 +64,78 @@ export const Navbar: React.FC = () => {
         </div>
       </div>
 
-      {/* Center: Case Selector & Quick Search */}
-      <div className="hidden md:flex items-center gap-3 flex-1 max-w-xl mx-6">
+      {/* Center: Workspace Selector, Case Selector & Quick Search */}
+      <div className="hidden md:flex items-center gap-2.5 flex-1 max-w-2xl mx-4">
+        {/* Workspace Selector Dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => {
+              setShowWorkspaceDropdown(!showWorkspaceDropdown);
+              setShowCaseDropdown(false);
+            }}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-xs text-gray-800 transition"
+            title="Switch Sovereign Workspace Boundary"
+          >
+            {activeWorkspace?.type === 'court' ? (
+              <Landmark className="w-3.5 h-3.5 text-gray-800 shrink-0" />
+            ) : activeWorkspace?.type === 'organization' ? (
+              <Building2 className="w-3.5 h-3.5 text-gray-800 shrink-0" />
+            ) : (
+              <User className="w-3.5 h-3.5 text-gray-800 shrink-0" />
+            )}
+            <span className="font-semibold truncate max-w-[120px]">
+              {activeWorkspace?.name || 'Personal Workspace'}
+            </span>
+            <span className="text-[9px] uppercase font-mono px-1 py-0.5 rounded bg-gray-200 text-gray-700 leading-none">
+              {activeWorkspace?.type || 'personal'}
+            </span>
+            <ChevronDown className="w-3 h-3 text-gray-400" />
+          </button>
+
+          {showWorkspaceDropdown && (
+            <div className="absolute left-0 mt-1.5 w-80 bg-white rounded-xl border border-gray-200 shadow-xl p-2 z-50 space-y-1">
+              <div className="text-[10px] font-mono font-medium text-gray-400 px-2 py-1 uppercase tracking-wider">
+                Authorized Workspaces
+              </div>
+              <div className="max-h-64 overflow-y-auto space-y-1">
+                {userWorkspaces.map((ws) => (
+                  <button
+                    key={ws.id}
+                    onClick={() => {
+                      switchWorkspace(ws.id);
+                      setShowWorkspaceDropdown(false);
+                    }}
+                    className={`w-full text-left p-2 rounded-lg transition text-xs flex items-center justify-between ${
+                      activeWorkspace?.id === ws.id
+                        ? 'bg-gray-100 text-gray-900 border border-gray-200 font-medium'
+                        : 'hover:bg-gray-50 text-gray-600'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      {ws.type === 'court' ? (
+                        <Landmark className="w-3.5 h-3.5 text-gray-800 shrink-0" />
+                      ) : ws.type === 'organization' ? (
+                        <Building2 className="w-3.5 h-3.5 text-gray-800 shrink-0" />
+                      ) : (
+                        <User className="w-3.5 h-3.5 text-gray-800 shrink-0" />
+                      )}
+                      <div className="truncate">
+                        <div className="truncate font-medium text-gray-900">{ws.name}</div>
+                        <div className="text-[10px] text-gray-400 uppercase font-mono">
+                          {ws.type} {ws.jurisdiction ? `· ${ws.jurisdiction}` : ''}
+                        </div>
+                      </div>
+                    </div>
+                    {activeWorkspace?.id === ws.id && (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-gray-900 shrink-0 ml-2" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Case Selector Dropdown */}
         <div className="relative">
           <button
