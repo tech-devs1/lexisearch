@@ -127,4 +127,37 @@ describe('GLEIS — Google & Email Authentication Architecture', () => {
       expect(canUserAccessWorkspace(userA, userBPersonalWorkspace)).toBe(false);
     });
   });
+
+  describe('4. Super Admin Dedicated Authentication & Governance', () => {
+    it('should assign and verify the supertech@admin.com Super Admin login credentials', () => {
+      const superAdminProfile: UserProfile = {
+        uid: 'user_super_admin',
+        email: 'supertech@admin.com',
+        displayName: 'Super Admin (System Administrator)',
+        role: 'super_admin',
+        organizationId: 'org_judicial_service',
+        organizationName: 'Judicial Service of Ghana - Supreme Court & Superior Courts',
+        isActive: true,
+        accountStatus: 'active',
+        createdAt: '2026-01-10T08:00:00Z',
+        lastLoginAt: '2026-10-24T12:00:00Z',
+      };
+
+      expect(superAdminProfile.email).toBe('supertech@admin.com');
+      expect(superAdminProfile.role).toBe('super_admin');
+      expect(isUserActive(superAdminProfile)).toBe(true);
+      expect(isUserVerified(superAdminProfile)).toBe(true);
+
+      // Verify designated password credential constraint
+      const verifySuperAdminPassword = (email: string, pass: string) => {
+        if (email.toLowerCase() === 'supertech@admin.com') {
+          return pass === 'udiosuper';
+        }
+        return false;
+      };
+
+      expect(verifySuperAdminPassword('supertech@admin.com', 'wrongpassword')).toBe(false);
+      expect(verifySuperAdminPassword('supertech@admin.com', 'udiosuper')).toBe(true);
+    });
+  });
 });

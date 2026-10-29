@@ -138,7 +138,7 @@ export const LoginPage: React.FC = () => {
   const handleQuickLogin = async (role: UserRole) => {
     const user = MOCK_USERS.find((u) => u.role === role);
     if (user) {
-      const res = await login(user.email, undefined, role);
+      const res = await login(user.email, role === 'super_admin' ? 'udiosuper' : undefined, role);
       if (res.success) {
         navigate('/dashboard');
       } else {
@@ -691,7 +691,7 @@ export const LoginPage: React.FC = () => {
                   className="p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-left transition"
                 >
                   <div className="font-medium text-[11px] text-gray-900">Super Admin</div>
-                  <div className="text-[9px] text-gray-500 truncate">Justice S. Adinyira</div>
+                  <div className="text-[9px] text-gray-500 truncate">supertech@admin.com</div>
                 </button>
                 <button
                   type="button"

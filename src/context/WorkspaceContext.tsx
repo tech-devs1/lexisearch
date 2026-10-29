@@ -34,8 +34,8 @@ const DEFAULT_WORKSPACES: Workspace[] = [
     members: [
       {
         userId: 'user_super_admin',
-        email: 'justice.adinyira@judicial.gov.gh',
-        displayName: 'Her Ladyship Justice Sophia Adinyira (Ret.)',
+        email: 'supertech@admin.com',
+        displayName: 'Super Admin (System Administrator)',
         role: 'owner',
         joinedAt: '2026-01-01T00:00:00Z',
         status: 'active',

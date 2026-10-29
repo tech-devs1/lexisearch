@@ -81,6 +81,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
+            // Ensure supertech@admin.com is always present as super_admin
+            const hasSuperTech = parsed.some((u: UserProfile) => u.email.toLowerCase() === 'supertech@admin.com');
+            if (!hasSuperTech) {
+              const superTechUser: UserProfile = {
+                uid: 'user_super_admin',
+                email: 'supertech@admin.com',
+                displayName: 'Super Admin (System Administrator)',
+                role: 'super_admin',
+                organizationId: 'org_judicial_service',
+                organizationName: 'Judicial Service of Ghana - Supreme Court & Superior Courts',
+                barNumber: 'GAR/0104/1979',
+                division: 'Supreme Court Administration & IT Security',
+                createdAt: '2026-01-10T08:00:00Z',
+                lastLoginAt: '2026-10-24T12:00:00Z',
+                isActive: true,
+              };
+              return [superTechUser, ...parsed.filter((u: UserProfile) => u.uid !== 'user_super_admin' && u.email !== 'justice.adinyira@judicial.gov.gh')];
+            }
             return parsed;
           }
         } catch { /* ignore */ }
@@ -165,10 +183,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const normalizedEmail = email.trim().toLowerCase();
 
     try {
+      // Special Super Admin Credentials Verification
+      if (normalizedEmail === 'supertech@admin.com') {
+        if (password && password !== 'udiosuper') {
+          await globalAuditService.logAction({
+            caseId: 'system',
+            action: 'AUTH_FAILED',
+            actionDescription: 'Failed authentication attempt for Super Admin with incorrect password',
+            userId: 'user_super_admin',
+            userEmail: 'supertech@admin.com',
+            userRole: 'super_admin',
+          });
+          setIsAuthLoading(false);
+          return {
+            success: false,
+            error: 'Invalid password for Super Admin account. Please use correct credentials.',
+          };
+        }
+      }
+
       // 1. Look up existing profile in users
       let matchedUser = users.find(
         (u) => u.email.toLowerCase() === normalizedEmail || (roleHint && u.role === roleHint)
       );
+
+      // Ensure supertech@admin.com is always mapped as super_admin
+      if (normalizedEmail === 'supertech@admin.com' && (!matchedUser || matchedUser.role !== 'super_admin')) {
+        matchedUser = {
+          uid: 'user_super_admin',
+          email: 'supertech@admin.com',
+          displayName: 'Super Admin (System Administrator)',
+          role: 'super_admin',
+          organizationId: 'org_judicial_service',
+          organizationName: 'Judicial Service of Ghana - Supreme Court & Superior Courts',
+          barNumber: 'GAR/0104/1979',
+          division: 'Supreme Court Administration & IT Security',
+          createdAt: '2026-01-10T08:00:00Z',
+          lastLoginAt: new Date().toISOString(),
+          isActive: true,
+        };
+        setUsers((prev) => [matchedUser!, ...prev.filter((u) => u.uid !== 'user_super_admin')]);
+      }
 
       // Check account activation status
       if (matchedUser && matchedUser.isActive === false) {
@@ -191,13 +246,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (password && auth && !isLocalMode) {
         try {
           const cred = await signInWithEmailAndPassword(auth, normalizedEmail, password);
-          if (!matchedUser) {
+          if (matchedUser) {
+            matchedUser.uid = cred.user.uid;
+          } else {
             // New user registration / first login -> Safe Default Role: 'viewer'
             matchedUser = {
               uid: cred.user.uid,
               email: cred.user.email || normalizedEmail,
               displayName: cred.user.displayName || normalizedEmail.split('@')[0],
-              role: 'viewer', // Safe default: must be elevated by Super Admin
+              role: normalizedEmail === 'supertech@admin.com' ? 'super_admin' : 'viewer',
               organizationId: 'org_judicial_service',
               organizationName: 'Judicial Service of Ghana',
               division: 'Registered Legal Researcher',
@@ -209,7 +266,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         } catch (firebaseErr: any) {
           console.warn('Firebase Auth notice:', firebaseErr.message);
-          // If mock password matches or mock email, continue
+          // If supertech@admin.com is logging in for the first time in Firebase Auth, auto-provision in Firebase Auth
+          if (normalizedEmail === 'supertech@admin.com' && password === 'udiosuper') {
+            try {
+              const newCred = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
+              if (matchedUser) {
+                matchedUser.uid = newCred.user.uid;
+              }
+            } catch (createErr: any) {
+              console.warn('Firebase createUser notice:', createErr.message);
+            }
+          }
         }
       }
 
