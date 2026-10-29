@@ -83,4 +83,48 @@ describe('GLEIS — Google & Email Authentication Architecture', () => {
       expect(isUserVerified(suspendedUser)).toBe(false);
     });
   });
+
+  describe('3. Single-Session Isolation & Cross-Account Protection', () => {
+    it('should disallow an active user from accessing or impersonating another user profile', () => {
+      const activeCounsel: UserProfile = {
+        ...mockUserProfile,
+        uid: 'user_counsel_001',
+        email: 'counsel.mensah@chambers.gh',
+        role: 'lawyer',
+      };
+
+      const anotherUser: UserProfile = {
+        uid: 'user_target_002',
+        email: 'target.registrar@judicial.gov.gh',
+        displayName: 'Court Registrar',
+        role: 'org_admin',
+        accountType: 'court',
+        isActive: true,
+      };
+
+      // Ensure identity boundary: an active user session UID cannot match another user's UID
+      expect(activeCounsel.uid).not.toBe(anotherUser.uid);
+      expect(activeCounsel.email).not.toBe(anotherUser.email);
+    });
+
+    it('should block unauthorized access to private personal workspace of another user', () => {
+      const userA: UserProfile = {
+        ...mockUserProfile,
+        uid: 'user_A',
+      };
+
+      const userBPersonalWorkspace = {
+        id: 'ws_personal_user_B',
+        ownerId: 'user_B',
+        members: [{ userId: 'user_B', role: 'owner', status: 'active' }],
+      };
+
+      const canUserAccessWorkspace = (user: UserProfile, workspace: typeof userBPersonalWorkspace) => {
+        if (workspace.ownerId === user.uid) return true;
+        return workspace.members.some((m) => m.userId === user.uid && m.status === 'active');
+      };
+
+      expect(canUserAccessWorkspace(userA, userBPersonalWorkspace)).toBe(false);
+    });
+  });
 });

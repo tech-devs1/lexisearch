@@ -21,10 +21,9 @@ import {
 import { useNavigate } from 'react-router-dom';
 
 export const Navbar: React.FC = () => {
-  const { currentUser, role, switchRole, logout } = useAuth();
+  const { currentUser, role, logout } = useAuth();
   const { cases, activeCase, selectCase } = useCase();
   const { activeWorkspace, userWorkspaces, switchWorkspace } = useWorkspace();
-  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const [showCaseDropdown, setShowCaseDropdown] = useState(false);
   const [showWorkspaceDropdown, setShowWorkspaceDropdown] = useState(false);
   const [quickQuery, setQuickQuery] = useState('');
@@ -220,63 +219,29 @@ export const Navbar: React.FC = () => {
         </form>
       </div>
 
-      {/* Right Controls: Role & User */}
+      {/* Right Controls: Role Badge & User Account */}
       <div className="flex items-center gap-2">
-        {/* Role Pill Switcher */}
-        <div className="relative">
-          <button
-            onClick={() => setShowRoleDropdown(!showRoleDropdown)}
-            className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-white border border-gray-200 hover:border-gray-300 text-xs text-gray-600 transition"
-            title="Switch RBAC role"
-          >
-            <span className={`w-1.5 h-1.5 rounded-full ${roleLabels[role]?.dot || 'bg-gray-400'}`} />
-            <span className="hidden sm:inline font-medium">{roleLabels[role]?.label || role}</span>
-            <ChevronDown className="w-3 h-3 text-gray-400" />
-          </button>
-
-          {showRoleDropdown && (
-            <div className="absolute right-0 mt-1.5 w-56 bg-white rounded-xl border border-gray-200 shadow-lg p-1.5 z-50">
-              <div className="text-[10px] font-mono font-medium text-gray-400 px-2 py-1 uppercase tracking-wider">
-                Simulate Role (RBAC)
-              </div>
-              {([
-                'super_admin',
-                'prosecutor',
-                'lawyer',
-                'investigator',
-                'viewer',
-                'org_admin',
-              ] as UserRole[]).map((r) => (
-                <button
-                  key={r}
-                  onClick={() => {
-                    switchRole(r);
-                    setShowRoleDropdown(false);
-                  }}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition ${
-                    role === r ? 'bg-gray-100 text-gray-900 font-medium' : 'hover:bg-gray-50 text-gray-500'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className={`w-1.5 h-1.5 rounded-full ${roleLabels[r]?.dot || 'bg-gray-400'}`} />
-                    <span>{roleLabels[r]?.label || r}</span>
-                  </div>
-                  {role === r && <CheckCircle2 className="w-3 h-3 text-gray-900" />}
-                </button>
-              ))}
-            </div>
-          )}
+        {/* Verified User Persona Badge (Read-only, secure identity indicator) */}
+        <div
+          className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-gray-100 border border-gray-200 text-xs text-gray-800 select-none"
+          title={`Authenticated Officer: ${currentUser?.displayName} (${currentUser?.email})`}
+        >
+          <span className={`w-1.5 h-1.5 rounded-full ${roleLabels[role]?.dot || 'bg-gray-400'}`} />
+          <span className="hidden sm:inline font-semibold text-gray-900">{roleLabels[role]?.label || role}</span>
         </div>
 
-        {/* User initials & logout */}
+        {/* User initials & secure logout */}
         <div className="flex items-center gap-1.5 pl-2 border-l border-gray-200">
-          <div className="w-7 h-7 rounded-lg bg-gray-900 flex items-center justify-center text-white text-xs font-mono font-medium">
+          <div
+            className="w-7 h-7 rounded-lg bg-gray-900 flex items-center justify-center text-white text-xs font-mono font-medium"
+            title={currentUser?.displayName || 'User Profile'}
+          >
             {currentUser?.displayName.charAt(0) || 'U'}
           </div>
           <button
             onClick={logout}
-            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-gray-100 rounded-lg transition"
-            title="Sign Out"
+            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+            title="Terminate Session (Sign Out)"
           >
             <LogOut className="w-3.5 h-3.5" />
           </button>

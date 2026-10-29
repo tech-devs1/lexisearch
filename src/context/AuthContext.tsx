@@ -55,7 +55,6 @@ interface AuthContextType {
   }) => Promise<{ success: boolean; error?: string }>;
   sendEmailVerificationNotice: () => Promise<boolean>;
   logout: () => void;
-  switchRole: (role: UserRole) => void;
   sendPasswordReset: (email: string) => Promise<void>;
   updateUserRole: (userId: string, newRole: UserRole) => Promise<boolean>;
   toggleUserStatus: (userId: string, active: boolean) => Promise<boolean>;
@@ -154,26 +153,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
     return () => unsubscribe();
-  }, [users]);
-
-  // Quick switch role (used for demo persona simulation)
-  const switchRole = useCallback((newRole: UserRole) => {
-    const matchingUser = users.find((u) => u.role === newRole);
-    if (matchingUser) {
-      if (!matchingUser.isActive) {
-        alert(`Account for ${matchingUser.displayName} is deactivated. Cannot switch.`);
-        return;
-      }
-      setCurrentUser(matchingUser);
-      globalAuditService.logAction({
-        caseId: 'system',
-        action: 'PERMISSION_CHANGE',
-        actionDescription: `Active session persona switched to ${matchingUser.displayName} (${newRole.toUpperCase()})`,
-        userId: matchingUser.uid,
-        userEmail: matchingUser.email,
-        userRole: newRole,
-      });
-    }
   }, [users]);
 
   // Secure Login with account active check & safe default role
@@ -657,7 +636,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         register,
         sendEmailVerificationNotice,
         logout,
-        switchRole,
         sendPasswordReset,
         updateUserRole,
         toggleUserStatus,

@@ -26,7 +26,7 @@ type AuthTab = 'signin' | 'register';
 type OnboardingType = 'individual' | 'organization' | 'court';
 
 export const LoginPage: React.FC = () => {
-  const { login, loginWithGoogle, register, sendPasswordReset, isAuthLoading } = useAuth();
+  const { currentUser, logout, login, loginWithGoogle, register, sendPasswordReset, isAuthLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -159,6 +159,86 @@ export const LoginPage: React.FC = () => {
       setIsRecovering(false);
     }
   };
+
+  // Enforce Single-Session Custody: If already authenticated, block cross-account access
+  if (currentUser && currentUser.isActive !== false) {
+    return (
+      <div className="min-h-screen bg-[#FAFAFA] flex flex-col justify-center items-center p-4 font-sans">
+        <div className="max-w-md w-full bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+          <div className="text-center space-y-3">
+            <div className="w-12 h-12 rounded-xl bg-gray-900 flex items-center justify-center text-white shadow-xs mx-auto">
+              <Shield className="w-6 h-6" />
+            </div>
+            <h1 className="text-base font-semibold text-gray-900 tracking-wide">
+              ACTIVE SESSION IN PROGRESS
+            </h1>
+            <p className="text-[11px] text-gray-500 font-medium uppercase tracking-widest">
+              GLEIS · Identity & Custody Gate
+            </p>
+          </div>
+
+          <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
+            <div className="text-[10px] text-gray-400 font-mono uppercase tracking-wider">
+              Currently Authenticated Officer
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-gray-900 text-white font-semibold flex items-center justify-center text-sm font-mono shrink-0">
+                {currentUser.displayName ? currentUser.displayName.charAt(0) : 'U'}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold text-gray-900 text-sm truncate">
+                  {currentUser.displayName}
+                </div>
+                <div className="text-xs text-gray-500 truncate">{currentUser.email}</div>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-gray-200">
+              <span className="px-2 py-0.5 rounded bg-gray-900 text-white text-[10px] font-mono uppercase tracking-wider">
+                {currentUser.role.replace('_', ' ')}
+              </span>
+              <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-mono uppercase tracking-wider">
+                Active Session
+              </span>
+              {currentUser.barNumber && (
+                <span className="px-2 py-0.5 rounded bg-gray-200 text-gray-800 text-[10px] font-mono">
+                  {currentUser.barNumber}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <p className="leading-relaxed">
+              To prevent unauthorized cross-account access and maintain evidentiary custody integrity, GLEIS restricts logging into another account while a session is active. To access a different account, sign out first.
+            </p>
+          </div>
+
+          <div className="space-y-2.5">
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard')}
+              className="w-full py-2.5 bg-gray-900 hover:bg-black text-white text-xs font-semibold rounded-lg shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>Return to My Dashboard</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                logout();
+              }}
+              className="w-full py-2.5 bg-white hover:bg-red-50 text-red-600 hover:text-red-700 border border-gray-200 hover:border-red-300 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              <span>Sign Out of Current Account</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] flex flex-col justify-center items-center p-4">

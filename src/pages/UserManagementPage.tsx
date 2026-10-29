@@ -19,7 +19,7 @@ import { useCase } from '../context/CaseContext';
 import { CaseMember } from '../types/case';
 
 export const UserManagementPage: React.FC = () => {
-  const { users, currentUser, updateUserRole, toggleUserStatus, provisionUser, switchRole } = useAuth();
+  const { users, currentUser, updateUserRole, toggleUserStatus, provisionUser } = useAuth();
   const { allCases, assignUserToCase, removeUserFromCase } = useCase();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -345,13 +345,6 @@ export const UserManagementPage: React.FC = () => {
                       {/* Actions */}
                       <td className="py-3 px-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => switchRole(u.role)}
-                            className="px-2 py-1 rounded bg-white hover:bg-gray-100 text-gray-700 text-xs font-medium border border-gray-200 transition"
-                            title="Simulate this role session"
-                          >
-                            Simulate
-                          </button>
                           <button
                             onClick={() => handleToggleStatus(u)}
                             disabled={isCurrentAuthUser}
