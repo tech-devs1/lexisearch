@@ -155,19 +155,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [currentUser, users]);
 
   // Wire Firebase Auth state observer (non-blocking, synced with verified profiles)
+  // Firestore is the source of truth — localStorage users array is the fallback
   useEffect(() => {
     if (!auth || isLocalMode) return;
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser && firebaseUser.email) {
-        const matched = users.find(
-          (u) => u.email.toLowerCase() === firebaseUser.email!.toLowerCase()
-        );
-        if (matched) {
-          if (matched.isActive) {
-            setCurrentUser(matched);
-          } else {
-            signOut(auth).catch(() => {});
+        // 1. Try Firestore first (source of truth)
+        let firestoreProfile: UserProfile | null = null;
+        try {
+          firestoreProfile = await getUserProfile(firebaseUser.uid);
+        } catch {
+          // Firestore unavailable — fall back to local
+        }
+
+        if (firestoreProfile) {
+          if (firestoreProfile.isActive === false) {
+            if (auth) signOut(auth).catch(() => {});
             setCurrentUser(null);
+            return;
+          }
+          // Use the Firestore profile as the authoritative source
+          setCurrentUser(firestoreProfile);
+          // Sync local users list if Firestore profile differs from cached version
+          setUsers((prev) => {
+            const idx = prev.findIndex((u) => u.uid === firestoreProfile!.uid || u.email.toLowerCase() === firestoreProfile!.email.toLowerCase());
+            if (idx >= 0) {
+              const local = prev[idx];
+              // Update local cache if role or status differ
+              if (local.role !== firestoreProfile!.role || local.isActive !== firestoreProfile!.isActive || local.accountStatus !== firestoreProfile!.accountStatus) {
+                const updated = [...prev];
+                updated[idx] = firestoreProfile!;
+                return updated;
+              }
+              return prev;
+            }
+            return [...prev, firestoreProfile!];
+          });
+        } else {
+          // 2. Fallback to localStorage users array
+          const matched = users.find(
+            (u) => u.email.toLowerCase() === firebaseUser.email!.toLowerCase()
+          );
+          if (matched) {
+            if (matched.isActive) {
+              setCurrentUser(matched);
+            } else {
+              if (auth) signOut(auth).catch(() => {});
+              setCurrentUser(null);
+            }
           }
         }
       }
@@ -316,6 +351,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           userEmail: updatedUser.email,
           userRole: updatedUser.role,
         });
+
+        // Non-blocking: populate users list from Firestore (source of truth)
+        if (!isLocalMode) {
+          loadAllUserProfiles().then((firestoreUsers) => {
+            if (firestoreUsers.length > 0) {
+              setUsers((prev) => {
+                const merged = new Map<string, UserProfile>();
+                // Start with local users
+                for (const u of prev) merged.set(u.uid, u);
+                // Firestore takes precedence
+                for (const u of firestoreUsers) merged.set(u.uid, u);
+                return Array.from(merged.values());
+              });
+            }
+          }).catch(() => { /* Firestore unavailable — keep local cache */ });
+        }
 
         setIsAuthLoading(false);
         return { success: true };
@@ -568,6 +619,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       userEmail: newProfile.email,
       userRole: newProfile.role,
     });
+
+    // Non-blocking: populate users list from Firestore after registration
+    if (!isLocalMode) {
+      loadAllUserProfiles().then((firestoreUsers) => {
+        if (firestoreUsers.length > 0) {
+          setUsers((prev) => {
+            const merged = new Map<string, UserProfile>();
+            for (const u of prev) merged.set(u.uid, u);
+            for (const u of firestoreUsers) merged.set(u.uid, u);
+            return Array.from(merged.values());
+          });
+        }
+      }).catch(() => { /* Firestore unavailable — keep local cache */ });
+    }
 
     setIsAuthLoading(false);
     return { success: true };

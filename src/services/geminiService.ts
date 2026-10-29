@@ -44,11 +44,12 @@ export function getGeminiModel(): string {
 }
 
 /**
- * Checks if the Gemini API key is configured with a valid format.
+ * Checks if the Gemini API key is configured with a valid format
+ * or if running with server-side proxy support.
  */
 export function isGeminiConfigured(): boolean {
   const key = getGeminiApiKey();
-  return key.length > 15;
+  return key.length > 15 || import.meta.env.PROD;
 }
 
 /**
@@ -195,14 +196,11 @@ export async function transcribeMediaWithGemini(
   error?: string;
 }> {
   const apiKey = getGeminiApiKey();
-  if (!apiKey || apiKey.length < 15) {
-    return {
-      success: false,
-      durationSeconds: exactDuration,
-      segments: [],
-      speakerCount: 0,
-      error: 'Google Gemini API key is not configured. Please add your key in Settings or environment.',
-    };
+  const hasDirectKey = Boolean(apiKey && apiKey.length >= 15);
+
+  // If no direct API key is set and we're in local development without proxy, notify officer
+  if (!hasDirectKey && !import.meta.env.PROD && typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    // Still try proxy in case vercel dev is running, but have clear fallback
   }
 
   // Check file size against inline multimodal payload limit
@@ -253,70 +251,115 @@ Strict Requirements:
   ]
 }`;
 
-    // Request to Gemini API with fallback handling
-    const executeCall = async (targetModel: string) => {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`;
-      return await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  inline_data: {
-                    mime_type: mimeType,
-                    data: base64Media,
-                  },
-                },
-                {
-                  text: systemPrompt,
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.1,
-            responseMimeType: 'application/json',
-          },
-        }),
-      });
-    };
+    let rawText: string | undefined;
 
-    let response = await executeCall(model);
+    // 1. Try Vercel Serverless Proxy if in production or if direct API key is not in browser
+    if (!hasDirectKey || import.meta.env.PROD) {
+      try {
+        const proxyRes = await fetch('/api/transcribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fileBase64: base64Media,
+            mimeType,
+            prompt: systemPrompt,
+            model,
+          }),
+        });
 
-    // If model not found (404), attempt fallback model
-    if (response.status === 404 && model !== FALLBACK_MODEL) {
-      response = await executeCall(FALLBACK_MODEL);
+        if (proxyRes.ok) {
+          const proxyData = await proxyRes.json();
+          rawText = proxyData.text;
+        } else if (!hasDirectKey) {
+          const errData = await proxyRes.json().catch(() => ({}));
+          return {
+            success: false,
+            durationSeconds: exactDuration,
+            segments: [],
+            speakerCount: 0,
+            error: errData.error || `Proxy transcription service error (${proxyRes.status})`,
+          };
+        }
+      } catch {
+        // If proxy request failed (e.g. 404 on local Vite server without Vercel CLI) and we have direct key, fall back
+        if (!hasDirectKey) {
+          return {
+            success: false,
+            durationSeconds: exactDuration,
+            segments: [],
+            speakerCount: 0,
+            error: 'Google Gemini transcription service is not configured. Please supply an API key in Settings.',
+          };
+        }
+      }
     }
 
-    if (!response.ok) {
-      const errText = await response.text();
-      let errorMsg = `Gemini transcription API error (${response.status})`;
-      try {
-        const errJson = JSON.parse(errText);
-        if (errJson.error?.message) {
-          errorMsg = errJson.error.message;
-        }
-      } catch { /* use status text */ }
+    // 2. Direct Gemini API call if rawText not yet obtained and direct key is present
+    if (!rawText && hasDirectKey) {
+      const executeCall = async (targetModel: string) => {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`;
+        return await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    inline_data: {
+                      mime_type: mimeType,
+                      data: base64Media,
+                    },
+                  },
+                  {
+                    text: systemPrompt,
+                  },
+                ],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.1,
+              responseMimeType: 'application/json',
+            },
+          }),
+        });
+      };
 
-      if (response.status === 429) {
-        errorMsg = 'Google Gemini API rate limit or quota exceeded. Please retry after a brief interval.';
-      } else if (response.status === 401 || response.status === 403) {
-        errorMsg = 'Invalid Google Gemini API key or unauthorized permissions.';
+      let response = await executeCall(model);
+
+      // If model not found (404), attempt fallback model
+      if (response.status === 404 && model !== FALLBACK_MODEL) {
+        response = await executeCall(FALLBACK_MODEL);
       }
 
-      return {
-        success: false,
-        durationSeconds: exactDuration,
-        segments: [],
-        speakerCount: 0,
-        error: errorMsg,
-      };
-    }
+      if (!response.ok) {
+        const errText = await response.text();
+        let errorMsg = `Gemini transcription API error (${response.status})`;
+        try {
+          const errJson = JSON.parse(errText);
+          if (errJson.error?.message) {
+            errorMsg = errJson.error.message;
+          }
+        } catch { /* use status text */ }
 
-    const data = await response.json();
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (response.status === 429) {
+          errorMsg = 'Google Gemini API rate limit or quota exceeded. Please retry after a brief interval.';
+        } else if (response.status === 401 || response.status === 403) {
+          errorMsg = 'Invalid Google Gemini API key or unauthorized permissions.';
+        }
+
+        return {
+          success: false,
+          durationSeconds: exactDuration,
+          segments: [],
+          speakerCount: 0,
+          error: errorMsg,
+        };
+      }
+
+      const data = await response.json();
+      rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    }
     if (!rawText) {
       return {
         success: false,
@@ -388,14 +431,7 @@ export async function queryGeminiRAG(
   error?: string;
 }> {
   const apiKey = getGeminiApiKey();
-  if (!apiKey || apiKey.length < 15) {
-    return {
-      success: false,
-      answer: 'Gemini API key is not configured. Please configure an authorized API key in System Settings.',
-      citations: [],
-      error: 'API key missing',
-    };
-  }
+  const hasDirectKey = Boolean(apiKey && apiKey.length >= 15);
 
   const model = getGeminiModel();
   const contextPrompt = passages
@@ -418,52 +454,94 @@ VERIFIED EXHIBIT PASSAGES:
 ${contextPrompt}`;
 
   try {
-    const executeCall = async (targetModel: string) => {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`;
-      return await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: systemPrompt }],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.15,
-            topP: 0.95,
-          },
-        }),
-      });
-    };
+    let answer: string | undefined;
 
-    let response = await executeCall(model);
-    if (response.status === 404 && model !== FALLBACK_MODEL) {
-      response = await executeCall(FALLBACK_MODEL);
+    // 1. Try Vercel Serverless Proxy (/api/gemini)
+    if (!hasDirectKey || import.meta.env.PROD) {
+      try {
+        const proxyRes = await fetch('/api/gemini', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: systemPrompt,
+            model,
+            temperature: 0.15,
+          }),
+        });
+
+        if (proxyRes.ok) {
+          const proxyData = await proxyRes.json();
+          answer = proxyData.text;
+        } else if (!hasDirectKey) {
+          const errData = await proxyRes.json().catch(() => ({}));
+          return {
+            success: false,
+            answer: `Evidentiary AI search error: ${errData.error || `Proxy service HTTP ${proxyRes.status}`}`,
+            citations: [],
+            error: errData.error || `HTTP ${proxyRes.status}`,
+          };
+        }
+      } catch {
+        if (!hasDirectKey) {
+          return {
+            success: false,
+            answer: 'Gemini AI search service is not configured. Please supply an API key in Settings.',
+            citations: [],
+            error: 'API key missing',
+          };
+        }
+      }
     }
 
-    if (!response.ok) {
-      const errText = await response.text();
-      let errorMsg = `Gemini RAG query error (${response.status})`;
-      try {
-        const parsed = JSON.parse(errText);
-        if (parsed.error?.message) errorMsg = parsed.error.message;
-      } catch { /* use generic */ }
+    // 2. Direct Gemini API call if not answered yet and direct key is present
+    if (!answer && hasDirectKey) {
+      const executeCall = async (targetModel: string) => {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`;
+        return await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [{ text: systemPrompt }],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.15,
+              topP: 0.95,
+            },
+          }),
+        });
+      };
 
-      if (response.status === 429) {
-        errorMsg = 'Google Gemini API quota reached. Please check rate limits.';
+      let response = await executeCall(model);
+      if (response.status === 404 && model !== FALLBACK_MODEL) {
+        response = await executeCall(FALLBACK_MODEL);
       }
 
-      return {
-        success: false,
-        answer: `Evidentiary AI search error: ${errorMsg}`,
-        citations: [],
-        error: errorMsg,
-      };
-    }
+      if (!response.ok) {
+        const errText = await response.text();
+        let errorMsg = `Gemini RAG query error (${response.status})`;
+        try {
+          const parsed = JSON.parse(errText);
+          if (parsed.error?.message) errorMsg = parsed.error.message;
+        } catch { /* use generic */ }
 
-    const data = await response.json();
-    const answer = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (response.status === 429) {
+          errorMsg = 'Google Gemini API quota reached. Please check rate limits.';
+        }
+
+        return {
+          success: false,
+          answer: `Evidentiary AI search error: ${errorMsg}`,
+          citations: [],
+          error: errorMsg,
+        };
+      }
+
+      const data = await response.json();
+      answer = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    }
     if (!answer) {
       return {
         success: false,

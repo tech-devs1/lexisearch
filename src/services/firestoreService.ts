@@ -184,7 +184,7 @@ export async function loadCases(organizationId?: string): Promise<LegalCase[]> {
       ? query(casesRef, where('organizationId', '==', organizationId), orderBy('createdAt', 'desc'), limit(50))
       : query(casesRef, orderBy('createdAt', 'desc'), limit(50));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map((d) => ({ id: d.id, ...d.data(), evidence: [] } as LegalCase));
+    return snapshot.docs.map((d) => ({ id: d.id, ...d.data(), evidence: [] } as unknown as LegalCase));
   } catch (err) {
     console.warn('Firestore loadCases error:', err);
     return [];

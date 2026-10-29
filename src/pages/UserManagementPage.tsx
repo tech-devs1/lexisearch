@@ -6,12 +6,14 @@ import {
   XCircle,
   UserCheck,
   Shield,
+  ShieldAlert,
   Briefcase,
   Search,
   AlertCircle,
   ChevronRight,
   Trash2,
   Lock,
+  Clock,
 } from 'lucide-react';
 import { UserProfile, UserRole, ROLE_LABELS } from '../types/auth';
 import { useAuth } from '../context/AuthContext';
@@ -125,6 +127,25 @@ export const UserManagementPage: React.FC = () => {
   const activeOfficers = users.filter((u) => u.isActive !== false).length;
   const deactivatedOfficers = totalOfficers - activeOfficers;
 
+  // Pending registrar verification queue
+  const pendingVerificationUsers = users.filter(
+    (u) => u.accountStatus === 'pending_verification' && u.isActive !== false
+  );
+
+  const handleApproveRegistrar = async (userId: string, userName: string) => {
+    const success = await updateUserRole(userId, 'org_admin');
+    if (success) {
+      showNotification(`Registrar application approved for ${userName}. Role elevated to Court Registrar.`);
+    }
+  };
+
+  const handleRejectApplication = async (userId: string, userName: string) => {
+    const success = await toggleUserStatus(userId, false);
+    if (success) {
+      showNotification(`Registrar application rejected for ${userName}. Account deactivated.`);
+    }
+  };
+
   // Find cases for a specific user
   const getUserAssignedCases = (userId: string) => {
     const target = users.find((u) => u.uid === userId);
@@ -200,6 +221,94 @@ export const UserManagementPage: React.FC = () => {
           <div className="text-[10px] text-gray-500 mt-0.5">Governed Dossiers</div>
         </div>
       </div>
+
+      {/* Pending Registrar Verification Queue */}
+      {pendingVerificationUsers.length > 0 ? (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 shadow-xs">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="w-7 h-7 rounded-md bg-amber-100 border border-amber-200 text-amber-800 flex items-center justify-center">
+              <ShieldAlert className="w-3.5 h-3.5" />
+            </span>
+            <div>
+              <h2 className="text-xs font-bold text-amber-900">
+                Pending Registrar Applications
+              </h2>
+              <p className="text-[10px] text-amber-700 font-mono mt-0.5">
+                {pendingVerificationUsers.length} application{pendingVerificationUsers.length !== 1 ? 's' : ''} awaiting Super Admin verification
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {pendingVerificationUsers.map((u) => (
+              <div
+                key={u.uid}
+                className="bg-white border border-amber-200 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-mono text-xs font-bold shrink-0 border border-amber-200">
+                    {u.displayName.charAt(0)}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold text-gray-900 flex items-center gap-1.5 flex-wrap">
+                      <span className="truncate">{u.displayName}</span>
+                      <span className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200 font-mono shrink-0">
+                        <Clock className="w-2.5 h-2.5" />
+                        Pending
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-gray-500 font-mono truncate">{u.email}</div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
+                      <span className="text-[10px] text-gray-600">
+                        <span className="text-gray-400 font-mono uppercase">Org:</span>{' '}
+                        {u.organizationName}
+                      </span>
+                      {u.division && (
+                        <span className="text-[10px] text-gray-600">
+                          <span className="text-gray-400 font-mono uppercase">Div:</span>{' '}
+                          {u.division}
+                        </span>
+                      )}
+                      <span className="text-[10px] text-gray-500 font-mono">
+                        <span className="text-gray-400 uppercase">Registered:</span>{' '}
+                        {new Date(u.createdAt).toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 sm:ml-auto">
+                  <button
+                    onClick={() => handleApproveRegistrar(u.uid, u.displayName)}
+                    className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-900 hover:bg-black text-white font-medium text-[11px] transition shadow-xs"
+                  >
+                    <UserCheck className="w-3.5 h-3.5" />
+                    Approve as Registrar
+                  </button>
+                  <button
+                    onClick={() => handleRejectApplication(u.uid, u.displayName)}
+                    className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-red-50 text-red-600 font-medium text-[11px] border border-red-200 transition"
+                  >
+                    <XCircle className="w-3.5 h-3.5" />
+                    Reject Application
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 shadow-xs flex items-center gap-2">
+          <ShieldAlert className="w-3.5 h-3.5 text-gray-400" />
+          <span className="text-[11px] text-gray-400 font-mono">
+            No pending registrar applications
+          </span>
+        </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white border border-gray-200 rounded-xl p-3 shadow-xs">
@@ -478,9 +587,9 @@ export const UserManagementPage: React.FC = () => {
                     <div className="space-y-2 max-h-60 overflow-y-auto">
                       {getUserAssignedCases(selectedUserForCases.uid).map((c) => {
                         const memberRecord = (c.members || []).find(
-                          (m) => m.userId === selectedUserForCases.uid
+                          (m) => m.uid === selectedUserForCases.uid
                         );
-                        const isCreator = c.createdBy === selectedUserForCases.uid;
+                        const isCreator = (typeof c.createdBy === 'string' ? c.createdBy : c.createdBy?.uid) === selectedUserForCases.uid;
 
                         return (
                           <div

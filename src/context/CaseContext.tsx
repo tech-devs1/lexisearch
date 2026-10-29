@@ -15,8 +15,12 @@ import {
   deleteCaseMember,
   saveEvidenceRecord, 
   saveBookmark as saveBookmarkFirestore,
-  deleteBookmarkFromFirestore 
+  deleteBookmarkFromFirestore,
+  loadCases,
+  loadCaseEvidence,
+  loadCaseMembers,
 } from '../services/firestoreService';
+import { isLocalMode } from '../services/firebase';
 import { useAuth } from './AuthContext';
 import { useWorkspace } from './WorkspaceContext';
 import { 
@@ -33,6 +37,7 @@ interface CaseContextType {
   evidenceList: EvidenceFile[];
   bookmarks: Bookmark[];
   isProcessingUpload: boolean;
+  isCasesLoading: boolean;
   uploadStatusMessage: string;
   selectCase: (caseId: string) => boolean;
   createCase: (caseData: Partial<LegalCase>) => Promise<LegalCase>;
@@ -80,7 +85,74 @@ export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const [isProcessingUpload, setIsProcessingUpload] = useState(false);
+  const [isCasesLoading, setIsCasesLoading] = useState(false);
   const [uploadStatusMessage, setUploadStatusMessage] = useState('');
+
+  // Synchronize cases from Firestore (authoritative) on user authentication
+  useEffect(() => {
+    if (!currentUser || isLocalMode) return;
+
+    let isMounted = true;
+    const fetchFirestoreCases = async () => {
+      setIsCasesLoading(true);
+      try {
+        const remoteCases = await loadCases(currentUser.organizationId);
+        if (!isMounted) return;
+
+        if (remoteCases && remoteCases.length > 0) {
+          const fullCases = await Promise.all(
+            remoteCases.map(async (c) => {
+              const [evidence, members] = await Promise.all([
+                loadCaseEvidence(c.id).catch(() => []),
+                loadCaseMembers(c.id).catch(() => []),
+              ]);
+              return {
+                ...c,
+                evidence: evidence.length > 0 ? evidence : (c.evidence || []),
+                members: members.length > 0 ? members : (c.members || []),
+                evidenceCount: {
+                  audio: evidence.filter((e) => e.fileType === 'audio').length,
+                  documents: evidence.filter((e) => e.fileType === 'document').length,
+                  total: evidence.length,
+                },
+              };
+            })
+          );
+
+          if (!isMounted) return;
+
+          setAllCases((prev) => {
+            const caseMap = new Map<string, LegalCase>();
+            for (const pc of prev) caseMap.set(pc.id, pc);
+            for (const rc of fullCases) {
+              const existing = caseMap.get(rc.id);
+              if (existing) {
+                caseMap.set(rc.id, {
+                  ...existing,
+                  ...rc,
+                  evidence: rc.evidence?.length ? rc.evidence : existing.evidence,
+                  members: rc.members?.length ? rc.members : existing.members,
+                });
+              } else {
+                caseMap.set(rc.id, rc);
+              }
+            }
+            return Array.from(caseMap.values());
+          });
+        }
+      } catch (err) {
+        console.warn('Firestore cases sync notice:', err);
+      } finally {
+        if (isMounted) setIsCasesLoading(false);
+      }
+    };
+
+    fetchFirestoreCases();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentUser?.uid, currentUser?.organizationId]);
 
   // Granular Workspace & Case-Level Scoping: Filter cases strictly according to workspace and permissions
   const authorizedCases = useMemo(() => {
@@ -582,6 +654,7 @@ export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
         evidenceList,
         bookmarks,
         isProcessingUpload,
+        isCasesLoading,
         uploadStatusMessage,
         selectCase,
         createCase,

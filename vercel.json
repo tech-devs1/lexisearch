@@ -2,7 +2,20 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "functions": {
+    "api/*.ts": {
+      "maxDuration": 60
+    }
+  },
   "rewrites": [
+    {
+      "source": "/api/gemini",
+      "destination": "/api/gemini"
+    },
+    {
+      "source": "/api/transcribe",
+      "destination": "/api/transcribe"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
