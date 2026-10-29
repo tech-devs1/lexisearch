@@ -20,6 +20,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useCase } from '../context/CaseContext';
 import { globalAuditService } from '../services/auditService';
+import { getGeminiModel, testGeminiApiKey, saveGeminiConfig } from '../services/geminiService';
 
 export const SettingsPage: React.FC = () => {
   const { currentUser, canManageUsers, canManageSettings } = useAuth();
@@ -45,13 +46,34 @@ export const SettingsPage: React.FC = () => {
     return (typeof localStorage !== 'undefined' ? localStorage.getItem('gleis_openai_api_key') : '') || '';
   });
   const [geminiApiKey, setGeminiApiKey] = useState(() => {
-    return (typeof localStorage !== 'undefined' ? localStorage.getItem('gleis_gemini_api_key') : '') || '';
+    return (
+      (typeof localStorage !== 'undefined' ? localStorage.getItem('gleis_gemini_api_key') : '') ||
+      import.meta.env.VITE_GEMINI_API_KEY ||
+      ''
+    );
   });
+  const [geminiModel, setGeminiModel] = useState(() => getGeminiModel());
+  const [isTestingGemini, setIsTestingGemini] = useState(false);
+  const [geminiTestFeedback, setGeminiTestFeedback] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
+
+  const handleTestGemini = async () => {
+    setIsTestingGemini(true);
+    setGeminiTestFeedback(null);
+    try {
+      const result = await testGeminiApiKey(geminiApiKey);
+      setGeminiTestFeedback(result);
+    } finally {
+      setIsTestingGemini(false);
+    }
+  };
 
   const handleSave = () => {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('gleis_openai_api_key', openaiApiKey.trim());
-      localStorage.setItem('gleis_gemini_api_key', geminiApiKey.trim());
+      saveGeminiConfig(geminiApiKey, geminiModel);
     }
     if (currentUser) {
       globalAuditService.logAction({
@@ -283,18 +305,64 @@ export const SettingsPage: React.FC = () => {
             </select>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-3 border-t border-gray-100">
-            <div>
-              <div className="font-medium text-gray-900">Google Gemini API Key (Multimodal Audio & RAG)</div>
-              <div className="text-gray-500 mt-0.5">Powers Gemini 1.5 Flash courtroom speech transcription, Ghanaian language audio recognition, and grounded legal Q&A.</div>
+          <div className="space-y-3 pt-3 border-t border-gray-100">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <div className="font-medium text-gray-900">Google Gemini API Key (Multimodal Transcription & RAG)</div>
+                <div className="text-gray-500 mt-0.5">Unified API key powering courtroom audio/video verbatim transcription, speaker diarization, and evidentiary RAG search.</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="password"
+                  value={geminiApiKey}
+                  onChange={(e) => setGeminiApiKey(e.target.value)}
+                  placeholder="Paste Google AI Studio Key..."
+                  className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 font-mono text-xs focus:ring-1 focus:ring-gray-900 focus:border-gray-900 w-full sm:w-64"
+                />
+                <button
+                  type="button"
+                  onClick={handleTestGemini}
+                  disabled={isTestingGemini || !geminiApiKey.trim()}
+                  className="px-3 py-1.5 bg-gray-900 hover:bg-black text-white font-medium text-xs rounded-lg disabled:opacity-50 transition shrink-0 shadow-xs"
+                >
+                  {isTestingGemini ? 'Testing...' : 'Test Key'}
+                </button>
+              </div>
             </div>
-            <input
-              type="password"
-              value={geminiApiKey}
-              onChange={(e) => setGeminiApiKey(e.target.value)}
-              placeholder="AIzaSy..."
-              className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 font-mono text-xs focus:ring-1 focus:ring-gray-900 focus:border-gray-900 w-full sm:w-64"
-            />
+
+            {/* Configurable Gemini Model Selection */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-gray-100/60">
+              <div>
+                <div className="font-medium text-gray-900 text-xs">Active Gemini Model for Transcription & Reasoning</div>
+                <div className="text-gray-500 text-[11px] mt-0.5">Select a currently supported Google Gemini model for evidence processing.</div>
+              </div>
+              <select
+                value={geminiModel}
+                onChange={(e) => setGeminiModel(e.target.value)}
+                className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-900 text-xs font-mono focus:ring-1 focus:ring-gray-900 focus:border-gray-900 w-full sm:w-64"
+              >
+                <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Recommended · Fast STT & RAG)</option>
+                <option value="gemini-3.5-flash">gemini-3.5-flash (Balanced Multimodal)</option>
+                <option value="gemini-3.8-flash">gemini-3.8-flash (Latest General Multimodal)</option>
+              </select>
+            </div>
+
+            {geminiTestFeedback && (
+              <div
+                className={`p-3 rounded-lg text-xs font-mono flex items-center gap-2 ${
+                  geminiTestFeedback.success
+                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                    : 'bg-red-50 text-red-800 border border-red-200'
+                }`}
+              >
+                {geminiTestFeedback.success ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                )}
+                <span>{geminiTestFeedback.message}</span>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-3 border-t border-gray-100">

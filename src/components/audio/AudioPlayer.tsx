@@ -296,16 +296,20 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
       setTranscribeStatus(
         transcribeEngine === 'gemini'
-          ? 'Transcribing Ghanaian legal testimony with Google Gemini 1.5 Flash...'
+          ? 'Transcribing Ghanaian legal testimony with Google Gemini...'
           : 'Transcribing word timestamps with OpenAI Whisper...'
       );
 
       const audioFile = new File([audioBlob], evidence.fileName, { type: audioBlob.type || 'audio/mp3' });
-      const result = await transcribeAudioFile(audioFile, {
-        engine: transcribeEngine,
-        apiKey: transcribeEngine === 'gemini' ? geminiKeyInput : openaiKeyInput,
+      const result = await transcribeAudioFile(audioFile, evidence.id, {
+        geminiKey: geminiKeyInput,
+        apiKey: openaiKeyInput,
         language: 'en-GH',
       });
+
+      if (result.warnings && result.warnings.length > 0 && result.segments.length === 0) {
+        throw new Error(result.warnings[0]);
+      }
 
       setTranscribeStatus('Updating evidence transcript and indexing...');
 
@@ -313,7 +317,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         segments: result.segments,
         durationSeconds: result.durationSeconds || duration,
         speakerCount: result.speakerCount || 2,
-        statusMessage: `Transcribed via ${result.engine.toUpperCase()}`,
+        statusMessage: `Transcribed via ${transcribeEngine.toUpperCase()}`,
       });
 
       setEditedSegments(result.segments);
@@ -777,7 +781,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                     type="password"
                     value={geminiKeyInput}
                     onChange={(e) => setGeminiKeyInput(e.target.value)}
-                    placeholder="AIzaSy..."
+                    placeholder="Google AI Studio API Key..."
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 font-mono text-xs focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                   />
                 </div>

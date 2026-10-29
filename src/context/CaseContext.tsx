@@ -309,7 +309,10 @@ export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const sha256 = await calculateFileSha256(file);
       const evidenceId = `ev_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-      const isAudio = file.type.startsWith('audio/') || /\.(mp3|wav|m4a|aac|ogg|flac)$/i.test(file.name);
+      const isAudio = 
+        file.type.startsWith('audio/') || 
+        file.type.startsWith('video/') || 
+        /\.(mp3|wav|m4a|aac|ogg|flac|mp4|webm|mov|mkv|avi)$/i.test(file.name);
       const fileType = isAudio ? 'audio' : 'document';
 
       if (currentUser) {

@@ -1,4 +1,5 @@
 import { TranscriptSegment, WordTimestamp } from '../types/evidence';
+import { transcribeMediaWithGemini, isGeminiConfigured, getGeminiModel } from './geminiService';
 
 export interface TranscriptionOptions {
   apiKey?: string;
@@ -301,13 +302,24 @@ export async function transcribeAudioFile(
   speakerCount: number;
   warnings?: string[];
 }> {
-  const geminiKey = (
-    options.geminiKey ||
-    (typeof localStorage !== 'undefined' ? localStorage.getItem('gleis_gemini_api_key') : null) ||
-    import.meta.env.VITE_GEMINI_API_KEY ||
-    ''
-  ).trim();
+  const exactDuration = await getExactAudioDuration(file);
+  let capturedWarning: string | undefined;
 
+  // 1. Try Google Gemini Multimodal Audio/Video Transcription (First-class provider)
+  if (isGeminiConfigured() || (options.geminiKey && options.geminiKey.length > 15)) {
+    const geminiResult = await transcribeMediaWithGemini(file, evidenceId, exactDuration);
+    if (geminiResult.success && geminiResult.segments.length > 0) {
+      return {
+        durationSeconds: geminiResult.durationSeconds,
+        segments: geminiResult.segments,
+        speakerCount: geminiResult.speakerCount,
+      };
+    } else if (geminiResult.error) {
+      capturedWarning = `Gemini Transcription Notice: ${geminiResult.error}`;
+    }
+  }
+
+  // 2. Try OpenAI Whisper Transcription if OpenAI Key is configured
   const openaiKey = (
     options.apiKey ||
     (typeof localStorage !== 'undefined' ? localStorage.getItem('gleis_openai_api_key') : null) ||
@@ -316,17 +328,7 @@ export async function transcribeAudioFile(
   ).trim();
 
   const endpoint = options.endpoint || import.meta.env.VITE_WHISPER_ENDPOINT || 'https://api.openai.com/v1/audio/transcriptions';
-  const exactDuration = await getExactAudioDuration(file);
 
-  // 1. Try Gemini Multimodal Speech Transcription if Gemini Key is available
-  if (geminiKey && geminiKey.length > 15) {
-    const geminiResult = await transcribeWithGemini(file, evidenceId, geminiKey, exactDuration);
-    if (geminiResult && geminiResult.segments.length > 0) {
-      return geminiResult;
-    }
-  }
-
-  // 2. Try OpenAI Whisper Transcription if OpenAI Key is available
   if (openaiKey && openaiKey.length > 15) {
     const whisperResult = await transcribeWithWhisper(file, evidenceId, openaiKey, endpoint, options.language, exactDuration);
     if (whisperResult && whisperResult.segments.length > 0) {
@@ -335,7 +337,11 @@ export async function transcribeAudioFile(
   }
 
   // 3. Fallback: Acoustic Voice Energy Alignment with live editable transcript
-  return generateAcousticAlignedTranscript(file, evidenceId, exactDuration);
+  const fallback = generateAcousticAlignedTranscript(file, evidenceId, exactDuration);
+  if (capturedWarning) {
+    fallback.warnings = [capturedWarning, ...(fallback.warnings || [])];
+  }
+  return fallback;
 }
 
 /**

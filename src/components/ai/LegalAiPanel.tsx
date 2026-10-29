@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Sparkles, 
   Send, 
@@ -21,8 +21,10 @@ import { useCase } from '../../context/CaseContext';
 export const LegalAiPanel: React.FC = () => {
   const { evidenceList } = useCase();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const queryParam = searchParams.get('q') || '';
 
-  const [question, setQuestion] = useState('');
+  const [question, setQuestion] = useState(queryParam);
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState<GroundedAiResponse | null>(null);
   const [showKeyModal, setShowKeyModal] = useState(false);
@@ -33,6 +35,13 @@ export const LegalAiPanel: React.FC = () => {
     return (typeof localStorage !== 'undefined' ? localStorage.getItem('gleis_openai_api_key') : '') || '';
   });
   const [keySavedToast, setKeySavedToast] = useState(false);
+
+  useEffect(() => {
+    if (queryParam.trim() && !response && !isLoading) {
+      setQuestion(queryParam.trim());
+      handleAsk(queryParam.trim());
+    }
+  }, [queryParam]);
 
   const activeProvider = useMemo(() => getActiveAiProvider(), [keySavedToast, showKeyModal]);
 
@@ -298,17 +307,17 @@ export const LegalAiPanel: React.FC = () => {
             <div className="space-y-3.5">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1 font-mono text-[11px]">
-                  Google Gemini API Key (Multimodal Audio & RAG)
+                  Google Gemini API Key (Multimodal Audio/Video & RAG)
                 </label>
                 <input
                   type="password"
                   value={geminiKeyInput}
                   onChange={(e) => setGeminiKeyInput(e.target.value)}
-                  placeholder="AIzaSy..."
+                  placeholder="Paste Google AI Studio Key..."
                   className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 font-mono text-xs focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                 />
                 <span className="text-[10px] text-gray-500 mt-1 block">
-                  Enables Gemini 1.5 Flash verbatim transcription and Ghanaian language audio comprehension.
+                  Unified key powering multimodal audio/video transcription, exact timestamps, and grounded legal RAG search.
                 </span>
               </div>
 

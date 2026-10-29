@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   Search, 
   Headphones, 
-  FileText
+  FileText,
+  Sparkles
 } from 'lucide-react';
 import { UnifiedSearchBar } from '../components/search/UnifiedSearchBar';
 import { SearchResultCard } from '../components/search/SearchResultCard';
@@ -16,6 +17,7 @@ import { globalAuditService } from '../services/auditService';
 
 export const UnifiedSearchPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const initialQuery = searchParams.get('q') || '';
   const { evidenceList, activeCase } = useCase();
   const { currentUser } = useAuth();
@@ -165,7 +167,17 @@ export const UnifiedSearchPage: React.FC = () => {
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate(`/ai-assistant?q=${encodeURIComponent(query)}`)}
+              className="px-2.5 py-1 rounded-lg bg-gray-900 hover:bg-black text-white font-medium text-[11px] transition flex items-center gap-1.5 shadow-xs"
+              title="Generate a grounded legal answer from this inquiry using Gemini RAG"
+            >
+              <Sparkles className="w-3 h-3 text-white" />
+              <span>Ask Evidentiary AI (Gemini RAG)</span>
+            </button>
+
+            <span className="text-gray-300">|</span>
             <span className="text-gray-400 font-mono text-[10px] font-semibold">VIEW:</span>
             <div className="flex items-center bg-gray-100 p-0.5 rounded-lg border border-gray-200">
               <button

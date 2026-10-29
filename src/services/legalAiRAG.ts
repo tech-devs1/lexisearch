@@ -1,6 +1,13 @@
 import { EvidenceFile } from '../types/evidence';
 import { GroundedAiResponse, GroundedCitation } from '../types/search';
 import { formatSecondsToTimestamp } from './audioProcessor';
+import { 
+  getGeminiApiKey, 
+  getGeminiModel, 
+  isGeminiConfigured, 
+  queryGeminiRAG, 
+  GroundedPassage 
+} from './geminiService';
 
 export interface GroundedQuestionOptions {
   geminiApiKey?: string;
@@ -17,14 +24,9 @@ export function getActiveAiProvider(): {
   provider: 'gemini' | 'openai' | 'local_rag';
   label: string;
 } {
-  const geminiKey = (
-    (typeof localStorage !== 'undefined' ? localStorage.getItem('gleis_gemini_api_key') : null) ||
-    import.meta.env.VITE_GEMINI_API_KEY ||
-    ''
-  ).trim();
-
-  if (geminiKey && geminiKey.length > 15) {
-    return { provider: 'gemini', label: 'Google Gemini 1.5 Flash (Grounded Multimodal RAG)' };
+  if (isGeminiConfigured()) {
+    const model = getGeminiModel();
+    return { provider: 'gemini', label: `Google Gemini (${model}) (Grounded Evidentiary RAG)` };
   }
 
   const openaiKey = (
@@ -117,12 +119,25 @@ export async function askLegalEvidenceAi(
     }
   }
 
-  // Check if query is broad/overview-oriented
-  const lowerQ = question.toLowerCase();
-  const isOverviewQuery = /summar|overview|what is|tell me|explain|everything|case|evidence|finding|witness|statement|record|exhibit|briefing/i.test(lowerQ);
+  const STOP_WORDS = new Set([
+  'what', 'when', 'where', 'which', 'who', 'whom', 'whose', 'why', 'how',
+  'was', 'were', 'is', 'are', 'am', 'been', 'being',
+  'the', 'and', 'or', 'but', 'if', 'then', 'else', 'for', 'with', 'about',
+  'against', 'between', 'into', 'through', 'during', 'before', 'after',
+  'above', 'below', 'to', 'from', 'up', 'down', 'in', 'out', 'on', 'off',
+  'over', 'under', 'again', 'further', 'then', 'once', 'here', 'there',
+  'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some',
+  'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too',
+  'very', 'can', 'will', 'just', 'should', 'now', 'does', 'did', 'doing',
+  'have', 'has', 'had', 'having', 'would', 'could', 'tell', 'show'
+]);
 
-  // Score relevant corpus passages based on question keywords
-  const qTokens = lowerQ.split(/[\s,?.!]+/).filter(w => w.length > 2);
+// Check if query is broad/overview-oriented
+  const lowerQ = question.toLowerCase();
+  const isOverviewQuery = /summar|overview|tell me|explain|everything about|briefing/i.test(lowerQ);
+
+  // Score relevant corpus passages based on question keywords (excluding common grammatical stop-words)
+  const qTokens = lowerQ.split(/[\s,?.!]+/).filter(w => w.length > 2 && !STOP_WORDS.has(w));
   const scoredSegments = corpusSegments.map(item => {
     let score = 0;
     const lowerText = item.text.toLowerCase();
@@ -159,62 +174,17 @@ export async function askLegalEvidenceAi(
 
   const contextPrompt = topSegments.map(s => `${s.identifier}:\n"${s.text}"`).join('\n\n');
 
-  // 1. Try Gemini API if key is available
-  if (geminiKey && geminiKey.length > 15) {
-    try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `You are an institutional judicial evidence research assistant for the Judicial Service of Ghana.
-Answer the legal query using ONLY the verified evidence passages provided below.
-
-CRITICAL JUDICIAL PROTOCOLS:
-1. Every factual assertion MUST cite the exact audio timestamp or document page identifier provided (e.g. [Audio: filename @ mm:ss] or [Doc: filename, Page X]).
-2. If the evidence does not clearly support an answer, explicitly declare that the record is silent or insufficient.
-3. NEVER fabricate facts, quotations, or citations.
-4. Maintain impartial judicial tone: do NOT make determinations of guilt or innocence.
-
-QUERY: "${question}"
-
-EVIDENTIARY PASSAGES:
-${contextPrompt}`
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.2,
-          }
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (generatedText) {
-          const citations: GroundedCitation[] = topSegments.slice(0, 4).map(s => ({
-            citationId: s.citationId,
-            type: s.type,
-            evidenceId: s.evidenceId,
-            fileName: s.fileName,
-            timestampRange: s.seconds !== undefined ? formatSecondsToTimestamp(s.seconds) : undefined,
-            seconds: s.seconds,
-            pageNumber: s.pageNumber,
-            quoteSnippet: s.text.slice(0, 150) + '...',
-          }));
-
-          return {
-            answer: generatedText,
-            citations,
-            evidenceFound: true,
-            disclaimer: LEGAL_DISCLAIMER,
-            generatedAt: new Date().toISOString(),
-          };
-        }
-      }
-    } catch (err) {
-      console.warn('Gemini API query failed, falling back:', err);
+  // 1. Try Google Gemini Grounded RAG if key is available
+  if (isGeminiConfigured() || (options.geminiApiKey && options.geminiApiKey.length > 15)) {
+    const ragResult = await queryGeminiRAG(question, topSegments);
+    if (ragResult.success && ragResult.answer) {
+      return {
+        answer: ragResult.answer,
+        citations: ragResult.citations,
+        evidenceFound: true,
+        disclaimer: LEGAL_DISCLAIMER,
+        generatedAt: new Date().toISOString(),
+      };
     }
   }
 
