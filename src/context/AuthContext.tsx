@@ -6,6 +6,8 @@ import { auth, isLocalMode } from '../services/firebase';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
   sendEmailVerification,
   sendPasswordResetEmail,
   signOut,
@@ -40,6 +42,7 @@ interface AuthContextType {
   role: UserRole;
   isAuthLoading: boolean;
   login: (email: string, password?: string, role?: UserRole) => Promise<{ success: boolean; error?: string }>;
+  loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   register: (data: {
     email: string;
     password?: string;
@@ -275,6 +278,119 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err: any) {
       setIsAuthLoading(false);
       return { success: false, error: err.message || 'Authentication error encountered.' };
+    }
+  };
+
+  // Google Single Sign-On (SSO) Authentication
+  const loginWithGoogle = async (): Promise<{ success: boolean; error?: string }> => {
+    setIsAuthLoading(true);
+    try {
+      if (!auth || isLocalMode) {
+        // Fallback for local testing / fixture mode
+        const demoGoogleUser: UserProfile = {
+          uid: `google_user_${Date.now()}`,
+          email: 'counsel.google@judicial.gov.gh',
+          displayName: 'Hon. Counsel (Google SSO)',
+          role: 'lawyer',
+          accountType: 'individual',
+          accountStatus: 'active',
+          organizationId: 'org_judicial_service',
+          organizationName: 'Ghana Legal Council',
+          division: 'Commercial & Civil Litigation',
+          emailVerified: true,
+          createdAt: new Date().toISOString(),
+          lastLoginAt: new Date().toISOString(),
+          isActive: true,
+        };
+        setUsers((prev) => [...prev.filter((u) => u.email !== demoGoogleUser.email), demoGoogleUser]);
+        setCurrentUser(demoGoogleUser);
+        setIsAuthLoading(false);
+        return { success: true };
+      }
+
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const cred = await signInWithPopup(auth, provider);
+      const googleUser = cred.user;
+      const normalizedEmail = (googleUser.email || '').trim().toLowerCase();
+
+      // Check if user profile exists in Firestore
+      let profile = await getUserProfile(googleUser.uid);
+
+      if (!profile) {
+        // Check if existing user in local state by email
+        const existing = users.find((u) => u.email.toLowerCase() === normalizedEmail);
+        if (existing) {
+          profile = {
+            ...existing,
+            uid: googleUser.uid,
+            lastLoginAt: new Date().toISOString(),
+            emailVerified: true,
+          };
+        } else {
+          // Provision new individual legal researcher / practitioner
+          profile = {
+            uid: googleUser.uid,
+            email: normalizedEmail,
+            displayName: googleUser.displayName || normalizedEmail.split('@')[0],
+            role: 'viewer', // Safe default role
+            accountType: 'individual',
+            accountStatus: 'active',
+            organizationId: 'org_judicial_service',
+            organizationName: 'Judicial Service of Ghana',
+            division: 'Registered Legal Officer',
+            emailVerified: true,
+            createdAt: new Date().toISOString(),
+            lastLoginAt: new Date().toISOString(),
+            isActive: true,
+          };
+        }
+        await saveUserProfile(profile);
+      } else {
+        profile = {
+          ...profile,
+          lastLoginAt: new Date().toISOString(),
+          emailVerified: true,
+        };
+        await saveUserProfile(profile);
+      }
+
+      // Check activation status
+      if (profile.isActive === false) {
+        setIsAuthLoading(false);
+        return {
+          success: false,
+          error: 'Your account has been deactivated by the Judicial Service Administrator.',
+        };
+      }
+
+      setUsers((prev) => {
+        const withoutCurrent = prev.filter((u) => u.uid !== profile!.uid && u.email.toLowerCase() !== normalizedEmail);
+        return [...withoutCurrent, profile!];
+      });
+      setCurrentUser(profile);
+
+      await globalAuditService.logAction({
+        caseId: 'system',
+        action: 'AUTH_LOGIN',
+        actionDescription: `Google SSO session authenticated: ${profile.displayName} (${profile.email}) [${profile.role.toUpperCase()}]`,
+        userId: profile.uid,
+        userEmail: profile.email,
+        userRole: profile.role,
+      });
+
+      setIsAuthLoading(false);
+      return { success: true };
+    } catch (err: any) {
+      console.warn('Google sign-in notice:', err);
+      setIsAuthLoading(false);
+      if (err.code === 'auth/popup-closed-by-user') {
+        return { success: false, error: 'Google sign-in popup closed before completion.' };
+      }
+      if (err.code === 'auth/popup-blocked') {
+        return { success: false, error: 'Google sign-in popup was blocked. Please allow popups for this site.' };
+      }
+      return { success: false, error: err.message || 'Google authentication failed.' };
     }
   };
 
@@ -537,6 +653,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role: currentUser?.role || 'viewer',
         isAuthLoading,
         login,
+        loginWithGoogle,
         register,
         sendEmailVerificationNotice,
         logout,
