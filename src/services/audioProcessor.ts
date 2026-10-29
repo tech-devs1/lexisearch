@@ -94,7 +94,7 @@ export async function fileToBase64(file: Blob | File): Promise<string> {
 }
 
 /**
- * Transcribes audio via Google Gemini 1.5 Flash Multimodal Audio API.
+ * Transcribes audio via Google Gemini Multimodal Audio API (legacy fallback path).
  * Accurately extracts verbatim speech, speaker diarization, and exact timestamps.
  */
 async function transcribeWithGemini(
@@ -139,7 +139,8 @@ Requirements:
   ]
 }`;
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`;
+    const activeModel = getGeminiModel();
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${geminiKey}`;
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -288,7 +289,7 @@ async function transcribeWithWhisper(
 /**
  * Main audio transcription entry point.
  * Priority:
- * 1. Google Gemini 1.5 Flash Multimodal Audio (high precision legal diarization & Ghanaian language support)
+ * 1. Google Gemini Multimodal Audio (high precision legal diarization & Ghanaian language support)
  * 2. OpenAI Whisper API (word-level timestamps)
  * 3. Acoustic Voice Energy Alignment & Browser Speech Engine
  */
