@@ -666,8 +666,11 @@ export const LoginPage: React.FC = () => {
 
       {/* Password Recovery Modal */}
       {showRecovery && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-gray-200 rounded-2xl max-w-sm w-full p-6 shadow-xl space-y-4 text-xs">
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget && !isRecovering) setShowRecovery(false); }}
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+        >
+          <div className="bg-white border border-gray-200 rounded-2xl max-w-sm w-full p-6 shadow-xl space-y-4 text-xs cursor-default">
             <h3 className="text-sm font-semibold text-gray-900">Judicial Account Recovery</h3>
             <p className="text-gray-500">
               Enter your official government or firm email to receive password reset credentials from the Judicial Service IT Bureau.

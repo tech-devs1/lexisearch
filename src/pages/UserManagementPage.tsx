@@ -487,7 +487,10 @@ export const UserManagementPage: React.FC = () => {
 
       {/* Case Assignments Drawer / Modal */}
       {selectedUserForCases && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setSelectedUserForCases(null); }}
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+        >
           <div className="bg-white border border-gray-200 rounded-xl max-w-xl w-full p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <div>
@@ -639,7 +642,10 @@ export const UserManagementPage: React.FC = () => {
 
       {/* Add User / Provision Modal */}
       {isAddUserOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setIsAddUserOpen(false); }}
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+        >
           <div className="bg-white border border-gray-200 rounded-xl max-w-md w-full p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">

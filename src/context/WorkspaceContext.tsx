@@ -47,11 +47,29 @@ const DEFAULT_WORKSPACES: Workspace[] = [
 ];
 
 export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, users } = useAuth();
   const legacyMockWsIds = ['ws_org_law_firm_01', 'ws_org_cid_01'];
   const legacyMockUserIds = ['user_prosecutor', 'user_lawyer', 'user_investigator', 'user_viewer', 'user_org_admin'];
 
-  // Load all workspaces from local storage or seed
+  const isMockWorkspace = (w: Workspace) => {
+    if (/sophia adinyira|tuah-yeboah|benjamin kwakye|eric addo/i.test(w.name)) return true;
+    if (legacyMockWsIds.includes(w.id)) return true;
+    if (legacyMockUserIds.includes(w.ownerId)) return true;
+    return false;
+  };
+
+  // Registered users on the system, strictly excluding the superadmin
+  const registeredNonAdminUsers = useMemo(() => {
+    return users.filter(
+      (u) =>
+        u.role !== 'super_admin' &&
+        u.email.toLowerCase() !== 'supertech@admin.com' &&
+        u.uid !== 'user_super_admin' &&
+        u.isActive !== false
+    );
+  }, [users]);
+
+  // Load all workspaces from local storage or seed, actively purging mock workspaces
   const [workspaces, setWorkspaces] = useState<Workspace[]>(() => {
     if (typeof localStorage !== 'undefined') {
       const saved = localStorage.getItem(WORKSPACES_STORAGE_KEY);
@@ -59,12 +77,14 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         try {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            // Clean out legacy mock workspaces and members
+            // Clean out legacy mock workspaces, mock members, and stale personas
             const cleaned = parsed
-              .filter((w: Workspace) => !legacyMockWsIds.includes(w.id))
+              .filter((w: Workspace) => !isMockWorkspace(w))
               .map((w: Workspace) => ({
                 ...w,
-                members: (w.members || []).filter((m: WorkspaceMember) => !legacyMockUserIds.includes(m.userId)),
+                members: (w.members || []).filter(
+                  (m: WorkspaceMember) => !legacyMockUserIds.includes(m.userId)
+                ),
               }));
             if (cleaned.length > 0) return cleaned;
           }
@@ -74,43 +94,90 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return DEFAULT_WORKSPACES;
   });
 
-  // Ensure every active user has an automatic Personal Workspace
+  // Ensure every active registered non-admin user has an automatic Personal Workspace
   useEffect(() => {
-    if (!currentUser) return;
-    const personalId = `ws_personal_${currentUser.uid}`;
+    if (registeredNonAdminUsers.length === 0) return;
     setWorkspaces((prev) => {
-      if (prev.some((w) => w.id === personalId)) return prev;
-      const personalWs: Workspace = {
-        id: personalId,
-        name: `${currentUser.displayName}'s Private Workspace`,
-        type: 'personal',
-        ownerId: currentUser.uid,
-        description: 'Confidential personal legal research, notes, exhibit transcripts, and private analysis.',
-        code: `PERS-${currentUser.uid.slice(-4).toUpperCase()}`,
-        members: [
-          {
-            userId: currentUser.uid,
-            email: currentUser.email,
-            displayName: currentUser.displayName,
-            role: 'owner',
-            joinedAt: new Date().toISOString(),
-            status: 'active',
-          },
-        ],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      return [...prev, personalWs];
-    });
-  }, [currentUser]);
+      // First clean out any lingering mock workspaces
+      const cleaned = prev.filter((w) => !isMockWorkspace(w));
+      let changed = cleaned.length !== prev.length;
+      const updated = [...cleaned];
 
-  // Workspaces accessible to current user
+      for (const u of registeredNonAdminUsers) {
+        const personalId = `ws_personal_${u.uid}`;
+        const exists = updated.some((w) => w.id === personalId || w.ownerId === u.uid);
+        if (!exists) {
+          changed = true;
+          updated.push({
+            id: personalId,
+            name: `${u.displayName}'s Private Workspace`,
+            type: u.accountType === 'court' ? 'court' : u.accountType === 'organization' ? 'organization' : 'personal',
+            ownerId: u.uid,
+            description: `Official workspace for registered officer ${u.displayName}`,
+            code: `PERS-${u.uid.slice(-4).toUpperCase()}`,
+            members: [
+              {
+                userId: u.uid,
+                email: u.email,
+                displayName: u.displayName,
+                role: 'owner',
+                joinedAt: u.createdAt || new Date().toISOString(),
+                status: 'active',
+              },
+            ],
+            createdAt: u.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+        }
+      }
+      return changed ? updated : prev;
+    });
+  }, [registeredNonAdminUsers]);
+
+  // Workspaces accessible to current user:
+  // For Super Admin, this contains ONLY registered users on the system, strictly excluding the superadmin
   const userWorkspaces = useMemo(() => {
     if (!currentUser) return [];
-    // Super admin sees all workspaces
-    if (currentUser.role === 'super_admin') return workspaces;
 
+    // Super admin sees ONLY registered users on the system (excluding superadmin)
+    if (currentUser.role === 'super_admin') {
+      return registeredNonAdminUsers.map((u) => {
+        const wsId = `ws_personal_${u.uid}`;
+        const existing = workspaces.find((w) => w.id === wsId || w.ownerId === u.uid);
+        if (existing) {
+          return {
+            ...existing,
+            name: `${u.displayName}'s Private Workspace`,
+            type: (u.accountType === 'court' ? 'court' : u.accountType === 'organization' ? 'organization' : 'personal') as WorkspaceType,
+          };
+        }
+        const generatedWs: Workspace = {
+          id: wsId,
+          name: `${u.displayName}'s Private Workspace`,
+          type: (u.accountType === 'court' ? 'court' : u.accountType === 'organization' ? 'organization' : 'personal') as WorkspaceType,
+          ownerId: u.uid,
+          description: `Official workspace for registered officer ${u.displayName}`,
+          code: `PERS-${u.uid.slice(-4).toUpperCase()}`,
+          members: [
+            {
+              userId: u.uid,
+              email: u.email,
+              displayName: u.displayName,
+              role: 'owner',
+              joinedAt: u.createdAt || new Date().toISOString(),
+              status: 'active',
+            },
+          ],
+          createdAt: u.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        return generatedWs;
+      });
+    }
+
+    // Normal registered users: see their own workspace(s)
     return workspaces.filter((w) => {
+      if (isMockWorkspace(w)) return false;
       if (w.ownerId === currentUser.uid) return true;
       return (w.members || []).some(
         (m) =>
@@ -118,7 +185,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           m.status === 'active'
       );
     });
-  }, [workspaces, currentUser]);
+  }, [workspaces, currentUser, registeredNonAdminUsers]);
 
   // Active workspace state
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string>(() => {
@@ -148,6 +215,13 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const found = userWorkspaces.find((w) => w.id === activeWorkspaceId);
     if (found) return found;
     return userWorkspaces[0] || null;
+  }, [userWorkspaces, activeWorkspaceId]);
+
+  // Keep active workspace ID aligned with valid user workspaces
+  useEffect(() => {
+    if (userWorkspaces.length > 0 && !userWorkspaces.some((w) => w.id === activeWorkspaceId)) {
+      setActiveWorkspaceId(userWorkspaces[0].id);
+    }
   }, [userWorkspaces, activeWorkspaceId]);
 
   // Switch workspace

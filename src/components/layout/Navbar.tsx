@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useCase } from '../../context/CaseContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
@@ -28,6 +28,44 @@ export const Navbar: React.FC = () => {
   const [showWorkspaceDropdown, setShowWorkspaceDropdown] = useState(false);
   const [quickQuery, setQuickQuery] = useState('');
   const navigate = useNavigate();
+
+  const workspaceDropdownRef = useRef<HTMLDivElement>(null);
+  const caseDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns when clicking outside or pressing Escape
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        workspaceDropdownRef.current &&
+        !workspaceDropdownRef.current.contains(target)
+      ) {
+        setShowWorkspaceDropdown(false);
+      }
+      if (
+        caseDropdownRef.current &&
+        !caseDropdownRef.current.contains(target)
+      ) {
+        setShowCaseDropdown(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowWorkspaceDropdown(false);
+        setShowCaseDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   const roleLabels: Record<UserRole, { label: string; dot: string }> = {
     super_admin: { label: ROLE_LABELS.super_admin, dot: 'bg-gray-900' },
@@ -66,13 +104,13 @@ export const Navbar: React.FC = () => {
       {/* Center: Workspace Selector, Case Selector & Quick Search */}
       <div className="hidden md:flex items-center gap-2.5 flex-1 max-w-2xl mx-4">
         {/* Workspace Selector Dropdown */}
-        <div className="relative">
+        <div className="relative" ref={workspaceDropdownRef}>
           <button
             onClick={() => {
               setShowWorkspaceDropdown(!showWorkspaceDropdown);
               setShowCaseDropdown(false);
             }}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-xs text-gray-800 transition"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-xs text-gray-800 transition cursor-pointer"
             title="Switch Sovereign Workspace Boundary"
           >
             {activeWorkspace?.type === 'court' ? (
@@ -82,11 +120,11 @@ export const Navbar: React.FC = () => {
             ) : (
               <User className="w-3.5 h-3.5 text-gray-800 shrink-0" />
             )}
-            <span className="font-semibold truncate max-w-[120px]">
-              {activeWorkspace?.name || 'Personal Workspace'}
+            <span className="font-semibold truncate max-w-[140px]">
+              {activeWorkspace?.name || (role === 'super_admin' ? (userWorkspaces.length > 0 ? userWorkspaces[0].name : 'No Registered Users') : 'Personal Workspace')}
             </span>
             <span className="text-[9px] uppercase font-mono px-1 py-0.5 rounded bg-gray-200 text-gray-700 leading-none">
-              {activeWorkspace?.type || 'personal'}
+              {activeWorkspace?.type || (role === 'super_admin' ? 'officer' : 'personal')}
             </span>
             <ChevronDown className="w-3 h-3 text-gray-400" />
           </button>
@@ -94,52 +132,58 @@ export const Navbar: React.FC = () => {
           {showWorkspaceDropdown && (
             <div className="absolute left-0 mt-1.5 w-80 bg-white rounded-xl border border-gray-200 shadow-xl p-2 z-50 space-y-1">
               <div className="text-[10px] font-mono font-medium text-gray-400 px-2 py-1 uppercase tracking-wider">
-                Authorized Workspaces
+                {role === 'super_admin' ? 'Registered User Workspaces' : 'Authorized Workspaces'}
               </div>
               <div className="max-h-64 overflow-y-auto space-y-1">
-                {userWorkspaces.map((ws) => (
-                  <button
-                    key={ws.id}
-                    onClick={() => {
-                      switchWorkspace(ws.id);
-                      setShowWorkspaceDropdown(false);
-                    }}
-                    className={`w-full text-left p-2 rounded-lg transition text-xs flex items-center justify-between ${
-                      activeWorkspace?.id === ws.id
-                        ? 'bg-gray-100 text-gray-900 border border-gray-200 font-medium'
-                        : 'hover:bg-gray-50 text-gray-600'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      {ws.type === 'court' ? (
-                        <Landmark className="w-3.5 h-3.5 text-gray-800 shrink-0" />
-                      ) : ws.type === 'organization' ? (
-                        <Building2 className="w-3.5 h-3.5 text-gray-800 shrink-0" />
-                      ) : (
-                        <User className="w-3.5 h-3.5 text-gray-800 shrink-0" />
-                      )}
-                      <div className="truncate">
-                        <div className="truncate font-medium text-gray-900">{ws.name}</div>
-                        <div className="text-[10px] text-gray-400 uppercase font-mono">
-                          {ws.type} {ws.jurisdiction ? `· ${ws.jurisdiction}` : ''}
+                {userWorkspaces.length === 0 ? (
+                  <div className="p-4 text-center text-xs text-gray-400 font-mono">
+                    No registered users on the system yet.
+                  </div>
+                ) : (
+                  userWorkspaces.map((ws) => (
+                    <button
+                      key={ws.id}
+                      onClick={() => {
+                        switchWorkspace(ws.id);
+                        setShowWorkspaceDropdown(false);
+                      }}
+                      className={`w-full text-left p-2 rounded-lg transition text-xs flex items-center justify-between cursor-pointer ${
+                        activeWorkspace?.id === ws.id
+                          ? 'bg-gray-100 text-gray-900 border border-gray-200 font-medium'
+                          : 'hover:bg-gray-50 text-gray-600'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        {ws.type === 'court' ? (
+                          <Landmark className="w-3.5 h-3.5 text-gray-800 shrink-0" />
+                        ) : ws.type === 'organization' ? (
+                          <Building2 className="w-3.5 h-3.5 text-gray-800 shrink-0" />
+                        ) : (
+                          <User className="w-3.5 h-3.5 text-gray-800 shrink-0" />
+                        )}
+                        <div className="truncate">
+                          <div className="truncate font-medium text-gray-900">{ws.name}</div>
+                          <div className="text-[10px] text-gray-400 uppercase font-mono">
+                            {ws.type} {ws.jurisdiction ? `· ${ws.jurisdiction}` : ''}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    {activeWorkspace?.id === ws.id && (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-gray-900 shrink-0 ml-2" />
-                    )}
-                  </button>
-                ))}
+                      {activeWorkspace?.id === ws.id && (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-gray-900 shrink-0 ml-2" />
+                      )}
+                    </button>
+                  ))
+                )}
               </div>
             </div>
           )}
         </div>
 
         {/* Case Selector Dropdown */}
-        <div className="relative">
+        <div className="relative" ref={caseDropdownRef}>
           <button
             onClick={() => setShowCaseDropdown(!showCaseDropdown)}
-            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white border border-gray-300 hover:border-gray-400 text-xs text-gray-700 transition"
+            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white border border-gray-300 hover:border-gray-400 text-xs text-gray-700 transition cursor-pointer"
           >
             <FolderLock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
             <span className="font-mono truncate max-w-[150px]">

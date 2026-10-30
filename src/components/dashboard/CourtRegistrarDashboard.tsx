@@ -459,7 +459,10 @@ export const CourtRegistrarDashboard: React.FC = () => {
 
       {/* Assign Counsel Modal (Requirement 3) */}
       {isAssignModalOpen && activeCase && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setIsAssignModalOpen(false); }}
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+        >
           <div className="bg-white border border-gray-200 rounded-xl max-w-lg w-full p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <div className="flex items-center gap-2">
@@ -548,7 +551,10 @@ export const CourtRegistrarDashboard: React.FC = () => {
 
       {/* Docket New Cause Modal */}
       {isNewCaseOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setIsNewCaseOpen(false); }}
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+        >
           <div className="bg-white border border-gray-200 rounded-xl max-w-lg w-full p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
